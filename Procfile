@@ -1,3 +1,2 @@
-talker: python talker.py
-manage: python management.py
+worker: python talker.py
 
