@@ -41,7 +41,7 @@ if __name__ == "__main__":
             
             for idx,row in tasks_to_send.iterrows():
                 bot.sendMessage(91686406,row['name'])
-            break
+                print(row['name'])
             time.sleep(3000)                   
     except:
         pass
