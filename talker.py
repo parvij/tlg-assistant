@@ -6,9 +6,10 @@ Created on Sat Apr 10 10:44:02 2021
 """
 from io import StringIO
 import telepot
-
+import os
 try:
-
+    bot = telepot.Bot(os.environ['tlg_token'])
+    bot.sendMessage(91686406,'started')
     
     import time
     import boto3
