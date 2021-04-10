@@ -9,12 +9,14 @@ import time
 from io import StringIO
 import boto3
 import os 
-import init
 import telepot
 import pandas as pd
 from datetime import date
 from datetime import datetime
-
+try:
+    import init
+except:
+    pass
 
 s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
 
