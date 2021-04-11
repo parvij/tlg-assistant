@@ -40,7 +40,7 @@ def write_file(df):
     print('write file')
     bucket = 'parvij-assistance'  # already created on S3
     csv_buffer = StringIO()
-    df.to_csv(csv_buffer)
+    df.to_csv(csv_buffer,index=False)
     s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
     s3_resource.Object(bucket, 'have_done.csv').put(Body=csv_buffer.getvalue())
 
@@ -57,7 +57,7 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text.isnumeric():
         df = read_file()
-        df = df.append({'id': text,'date':date.today().strftime('%m/%d/%Y')}, ignore_index=True)
+        df = df.append({'task_id': text,'date':date.today().strftime('%m/%d/%Y')}, ignore_index=True)
         write_file(df)
     update.message.reply_text('Done')
     
