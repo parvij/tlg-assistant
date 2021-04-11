@@ -4,7 +4,6 @@ Created on Sat Apr 10 10:44:02 2021
 
 @author: Parviz.Asoodehfard
 """
-from io import StringIO
 try:
     import init
 except:
@@ -16,6 +15,7 @@ try:
     bot.sendMessage(91686406,'started')
     
     import time
+    from io import StringIO
     import boto3
     import os 
     import pandas as pd
