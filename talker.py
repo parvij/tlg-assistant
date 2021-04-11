@@ -45,7 +45,7 @@ try:
             tasks_to_send = tasks_to_send2[tasks_to_send2.Periority == tasks_to_send2.Periority.min()]
             
             for idx,row in tasks_to_send.iterrows():
-                bot.sendMessage(91686406,row['name'])
+                bot.sendMessage(91686406,row['id']+'  '+row['name'])
                 print(row['name'])
             time.sleep(3000)                   
     bot.sendMessage(91686406,'end') 
