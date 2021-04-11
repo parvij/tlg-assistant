@@ -2,4 +2,4 @@ telepot
 pandas
 boto3
 python-telegram-bot
-telegram
+telegram.py
