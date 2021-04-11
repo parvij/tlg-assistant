@@ -1,5 +1,5 @@
 telepot
 pandas
 boto3
-telegram.ext
+python-telegram-bot
 telegram
