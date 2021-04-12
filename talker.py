@@ -43,8 +43,8 @@ try:
     
     
                 #started
-                tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
-                done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
+                tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
+                done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
                 tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
     
                 tasks_to_send = tasks_to_send2[tasks_to_send2.Periority == tasks_to_send2.Periority.min()]
