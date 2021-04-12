@@ -4,7 +4,9 @@ try:
 except:
     pass
 import pandas as pd
-from datetime import date
+#from datetime import date
+from pytz import timezone
+import datetime
 #from datetime import datetime
 #import math
 import boto3
@@ -57,7 +59,8 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text.isnumeric():
         df = read_file()
-        df = df.append({'task_id': text,'date':date.today().strftime('%m/%d/%Y')}, ignore_index=True)
+        curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
+        df = df.append({'task_id': text,'date':curr_date.strftime('%m/%d/%Y')}, ignore_index=True)
         write_file(df)
     update.message.reply_text('Done')
     
