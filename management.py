@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr 10 10:44:02 2021
+
+@author: Parviz.Asoodehfard
+"""
 #import logging
 try:
     import init
@@ -22,23 +28,17 @@ from telegram.ext import (
     CallbackContext,
 )
 
-CAT_SELECTING = range(1)
+SELECTING_COMMAND = range(1)
 
 def start(update: Update, context: CallbackContext) -> int:
     print('start')
-    #reply_keyboard = [['Boy', 'Girl', 'Other']]
-    #reply_keyboard = [["Bakery, Cake and Cookies","Auto Repair","Banking Services"],                      ["Barber Shop","Business Consultation","Car Dealership"],                      ["Certified Translator","Childcare Services","Cleaning Services"],                      ["Construction / Home Renovation Services","Counseling Services","Currency Exchange"],                      ["Dentist","Digital Marketing & Advertisement","Driving School"],                      ["Electronics / Laptop & Mobile Rapair","Food Catering","Graphic Design"],                      ["Hand-Made Jewelry","Heating, Cooling, Ventilation and Air Conditioner Services","Home Maintenance / Repair Services"],                      ["Immigration Services","Insurance & Financial Services","Interior Design and Home Staging"],                      ["Iranian Food Market","Lawyer / Paralegal","Local Farsi Radio Station"],                      ["Makeup, Hair Style and Beauty","Massage Therapy","Moving & Delivery Services"],                      ["Music Lessons","Newcomers Services","Optometrist / Optician"],                      ["Photography Services","Physician","Physiotherapy & Chiropractic"],                      ["Printing Services","Psychotherapist","Publication"],                      ["Real Estate","Restaurants","TAX & Accounting Services"],                      ["Travel Agency","Tutor / Instructor & Trainer","Website Development Services"]]
-    
-    
-    # make a matrix with col_n columns from categories
-
-    update.message.reply_text('کدوم تسک رو انجام دادی؟'
-        #reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'Sleep..', 'Checking..']]
+    update.message.reply_text('',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
 
-    return CAT_SELECTING
+    return SELECTING_COMMAND
 
-def write_file(df):
+def write_have_done(df):
     print('write file')
     bucket = 'parvij-assistance'  # already created on S3
     csv_buffer = StringIO()
@@ -46,7 +46,7 @@ def write_file(df):
     s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
     s3_resource.Object(bucket, 'have_done.csv').put(Body=csv_buffer.getvalue())
 
-def read_file():
+def reading_have_done():
     print('read file')
     s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
     s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='have_done.csv')
@@ -54,17 +54,27 @@ def read_file():
     df = pd.read_csv(s3_data)
     return df
 
-def cat_selecting(update: Update, context: CallbackContext) -> int:
+def reading_tasks():
+    print('read file')
+    s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
+    s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='tasks.csv')
+    s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
+    df = pd.read_csv(s3_data)
+    return df
+
+def checking(update: Update, context: CallbackContext) -> int:
     print('cat selecting')
     text = update.message.text
     if text.isnumeric():
-        df = read_file()
+        df = reading_have_done()
         curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
         df = df.append({'task_id': text,'date':curr_date.strftime('%m/%d/%Y')}, ignore_index=True)
-        write_file(df)
-    update.message.reply_text('Done')
+        write_have_done(df)
+        update.message.reply_text('Done')
+    else:
+        update.message.reply_text('It is not a number')
     
-    return CAT_SELECTING
+    return SELECTING_COMMAND
     
 
 
@@ -76,6 +86,42 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
     return ConversationHandler.END
 
+def all_tasks():
+    tasks_df = reading_tasks()
+
+    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
+    list_all_tasks = tasks_to_send.apply(lambda r: str(r.id)+'_'+r.name,axis=1).to_list()
+    update.message.reply_text('\n'.join(list_all_tasks))
+
+    return SELECTING_COMMAND
+
+def unchecked_tasks():
+    have_done_df=reading_have_done()
+    tasks_df = reading_tasks()
+
+    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
+    done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
+    tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
+    
+    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r.id)+'_'+r.name,axis=1).to_list()
+    update.message.reply_text('\n'.join(list_unchecked_tasks))
+
+    return SELECTING_COMMAND
+
+def cat_selecting(update: Update, context: CallbackContext) -> int:
+    text = update.message.text
+    if text == 'List of all Tasks':
+        all_tasks()
+        return SELECTING_COMMAND
+    elif text == 'List of Unchecked':
+        unchecked_tasks()
+        return SELECTING_COMMAND
+    elif text == 'Sleep..':
+        #fill later
+        return SELECTING_COMMAND
+    elif text == 'Checking..':
+        update.message.reply_text('which tasks you have done?')
+        return CHECKING
 
 def main() -> None:
     # Create the Updater and pass it your bot's token.
@@ -90,8 +136,8 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            CAT_SELECTING: [MessageHandler(Filters.text, cat_selecting)],
-#            GENDER: [MessageHandler(Filters.regex('^(Boy|Girl|Other)$'), gender)],
+            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|Sleep..|Checking..)$'), cat_selecting)],
+            CHECKING: [MessageHandler(Filters.text, checking)],
 #            PHOTO: [MessageHandler(Filters.photo, photo), CommandHandler('skip', skip_photo)],
 #            LOCATION: [
 #                MessageHandler(Filters.location, location),
