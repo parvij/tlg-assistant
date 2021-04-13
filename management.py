@@ -25,7 +25,7 @@ SELECTING_COMMAND, CHECKING = range(2)
 def start(update: Update, context: CallbackContext) -> int:
     print('start')
     reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'Sleep..', 'Checking..']]
-    update.message.reply_text('',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+    update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
 
     return SELECTING_COMMAND
@@ -54,15 +54,14 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
     return ConversationHandler.END
 
-def all_tasks(update: Update):
+def all_tasks(update):
     tasks_df = utility.reading_tasks()
     curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
-    list_all_tasks = tasks_to_send.apply(lambda r: str(r.id)+'_'+r.name,axis=1).to_list()
-    update.message.reply_text('\n'.join(list_all_tasks))
+    list_all_tasks = tasks_to_send.apply(lambda r: str(r['id'])+'_'+r['name'],axis=1).to_list()
 
-    return SELECTING_COMMAND
+    return '\n'.join(list_all_tasks)
 
 def unchecked_tasks(update: Update):
     have_done_df= utility.reading_have_done()
@@ -73,18 +72,19 @@ def unchecked_tasks(update: Update):
     done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
     tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
     
-    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r.id)+'_'+r.name,axis=1).to_list()
-    update.message.reply_text('\n'.join(list_unchecked_tasks))
+    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
 
-    return SELECTING_COMMAND
+    return '\n'.join(list_unchecked_tasks)
 
 def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text == 'List of all Tasks':
-        all_tasks(Update)
+        msg = all_tasks(Update)
+        update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'List of Unchecked':
-        unchecked_tasks(update)
+        msg = unchecked_tasks(update)
+        update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'Sleep..':
         #fill later
