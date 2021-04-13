@@ -1,3 +1,16 @@
+try:
+    import init
+except:
+    pass
+import pandas as pd
+
+import boto3
+from io import StringIO  # python3 (or BytesIO for python2)
+import os
+from pytz import timezone
+import datetime
+
+
 def write_have_done(df):
     print('write file')
     bucket = 'parvij-assistance'  # already created on S3
@@ -27,6 +40,7 @@ def reading_tasks():
 def reading_task_to_send():
     have_done_df=reading_have_done()
     tasks_df = reading_tasks()
+    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
 
     #started

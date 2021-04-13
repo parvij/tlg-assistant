@@ -4,20 +4,10 @@ Created on Sat Apr 10 10:44:02 2021
 
 @author: Parviz.Asoodehfard
 """
-#import logging
-try:
-    import init
-except:
-    pass
-import pandas as pd
+
 import utility
-#from datetime import date
 from pytz import timezone
 import datetime
-#from datetime import datetime
-#import math
-import boto3
-from io import StringIO  # python3 (or BytesIO for python2)
 import os
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
@@ -28,7 +18,6 @@ from telegram.ext import (
     ConversationHandler,
     CallbackContext,
 )
-
 
 
 SELECTING_COMMAND, CHECKING = range(2)
@@ -45,10 +34,10 @@ def checking(update: Update, context: CallbackContext) -> int:
     print('cat selecting')
     text = update.message.text
     if text.isnumeric():
-        df = reading_have_done()
+        df = utility.reading_have_done()
         curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
         df = df.append({'task_id': text,'date':curr_date.strftime('%m/%d/%Y')}, ignore_index=True)
-        write_have_done(df)
+        utility.write_have_done(df)
         update.message.reply_text('Done')
     else:
         update.message.reply_text('It is not a number')
@@ -66,7 +55,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def all_tasks(update: Update):
-    tasks_df = reading_tasks()
+    tasks_df = utility.reading_tasks()
     curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
@@ -76,8 +65,8 @@ def all_tasks(update: Update):
     return SELECTING_COMMAND
 
 def unchecked_tasks(update: Update):
-    have_done_df=reading_have_done()
-    tasks_df = reading_tasks()
+    have_done_df= utility.reading_have_done()
+    tasks_df = utility.reading_tasks()
     curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]

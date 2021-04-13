@@ -4,25 +4,17 @@ Created on Sat Apr 10 10:44:02 2021
 
 @author: Parviz.Asoodehfard
 """
-try:
-    import init
-except:
-    pass
 import telepot
 import os
+
 try:
     bot = telepot.Bot(os.environ['tlg_token'])
     bot.sendMessage(91686406,'started')
     
     import time
-    from io import StringIO
-    import boto3
     import os 
-    import pandas as pd
-    #from datetime import date
     from pytz import timezone
     import datetime
-    #from datetime import datetime
     import utility
     
     if __name__ == "__main__":
@@ -32,7 +24,7 @@ try:
             if 7 < curr_time.hour < 22:
                 curr_date = curr_time.date()
                 
-                tasks_to_send = reading_task_to_send()
+                tasks_to_send = utility.reading_task_to_send()
                 
                 for idx,row in tasks_to_send.iterrows():
                     bot.sendMessage(91686406,str(row['id'])+'  '+row['name'])
