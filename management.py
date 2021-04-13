@@ -10,6 +10,7 @@ try:
 except:
     pass
 import pandas as pd
+import utility
 #from datetime import date
 from pytz import timezone
 import datetime
@@ -27,34 +28,6 @@ from telegram.ext import (
     ConversationHandler,
     CallbackContext,
 )
-
-def write_have_done(df):
-    print('write file')
-    bucket = 'parvij-assistance'  # already created on S3
-    csv_buffer = StringIO()
-    df.to_csv(csv_buffer,index=False)
-    s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-    s3_resource.Object(bucket, 'have_done.csv').put(Body=csv_buffer.getvalue())
-
-def reading_have_done():
-    print('read file')
-    s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-    s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='have_done.csv')
-    s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
-    df = pd.read_csv(s3_data)
-    return df
-
-def reading_tasks():
-    print('read file')
-    s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-    s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='tasks.csv')
-    s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
-    df = pd.read_csv(s3_data)
-    return df
-
-
-
-
 
 
 

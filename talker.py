@@ -23,9 +23,7 @@ try:
     from pytz import timezone
     import datetime
     #from datetime import datetime
-    
-    s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-    
+    import utility
     
     if __name__ == "__main__":
         bot = telepot.Bot(os.environ['tlg_token'])
@@ -33,21 +31,8 @@ try:
             curr_time = datetime.datetime.now().astimezone(timezone('America/Denver'))
             if 7 < curr_time.hour < 22:
                 curr_date = curr_time.date()
-                s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='tasks.csv')
-                s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
-                tasks_df = pd.read_csv(s3_data)
-    
-                s3_object = s3_resource.Object(bucket_name='parvij-assistance', key='have_done.csv')
-                s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
-                have_done_df = pd.read_csv(s3_data)
-    
-    
-                #started
-                tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
-                done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
-                tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
-    
-                tasks_to_send = tasks_to_send2[tasks_to_send2.Periority == tasks_to_send2.Periority.min()]
+                
+                tasks_to_send = reading_task_to_send()
                 
                 for idx,row in tasks_to_send.iterrows():
                     bot.sendMessage(91686406,str(row['id'])+'  '+row['name'])
