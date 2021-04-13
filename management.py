@@ -28,16 +28,6 @@ from telegram.ext import (
     CallbackContext,
 )
 
-SELECTING_COMMAND = range(1)
-
-def start(update: Update, context: CallbackContext) -> int:
-    print('start')
-    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'Sleep..', 'Checking..']]
-    update.message.reply_text('',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
-    )
-
-    return SELECTING_COMMAND
-
 def write_have_done(df):
     print('write file')
     bucket = 'parvij-assistance'  # already created on S3
@@ -61,6 +51,22 @@ def reading_tasks():
     s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
     df = pd.read_csv(s3_data)
     return df
+
+
+
+
+
+
+
+SELECTING_COMMAND, CHECKING = range(2)
+
+def start(update: Update, context: CallbackContext) -> int:
+    print('start')
+    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'Sleep..', 'Checking..']]
+    update.message.reply_text('',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+    )
+
+    return SELECTING_COMMAND
 
 def checking(update: Update, context: CallbackContext) -> int:
     print('cat selecting')
@@ -86,8 +92,9 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
     return ConversationHandler.END
 
-def all_tasks():
+def all_tasks(update: Update):
     tasks_df = reading_tasks()
+    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
     list_all_tasks = tasks_to_send.apply(lambda r: str(r.id)+'_'+r.name,axis=1).to_list()
@@ -95,9 +102,10 @@ def all_tasks():
 
     return SELECTING_COMMAND
 
-def unchecked_tasks():
+def unchecked_tasks(update: Update):
     have_done_df=reading_have_done()
     tasks_df = reading_tasks()
+    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
     done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
@@ -111,10 +119,10 @@ def unchecked_tasks():
 def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text == 'List of all Tasks':
-        all_tasks()
+        all_tasks(Update)
         return SELECTING_COMMAND
     elif text == 'List of Unchecked':
-        unchecked_tasks()
+        unchecked_tasks(update)
         return SELECTING_COMMAND
     elif text == 'Sleep..':
         #fill later
