@@ -36,8 +36,7 @@ def checking(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text.isnumeric():
         df = utility.reading_file('have_done.csv')
-        curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
-        df = df.append({'task_id': text,'date':curr_date.strftime('%m/%d/%Y')}, ignore_index=True)
+        df = df.append({'task_id': text,'date':utility.get_today().strftime('%m/%d/%Y')}, ignore_index=True)
         utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
     else:
@@ -49,10 +48,9 @@ def adding_task(update: Update, context: CallbackContext) -> int:
     print('adding_task')
     text = update.message.text
     df = utility.reading_file('tasks.csv')
-    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
     
-    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':curr_date.strftime('%m/%d/%Y'),'Periority':1}, ignore_index=True)
+    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':utility.get_today().strftime('%m/%d/%Y'),'Periority':1}, ignore_index=True)
     utility.writing_file(df,'tasks.csv')
     update.message.reply_text('Done')
     
@@ -70,9 +68,8 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
 def all_tasks(update):
     tasks_df = utility.reading_file('tasks.csv')
-    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
-    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
+    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
     list_all_tasks = tasks_to_send.apply(lambda r: str(r['id'])+'_'+r['name'],axis=1).to_list()
 
     return '\n'.join(list_all_tasks)
@@ -80,10 +77,9 @@ def all_tasks(update):
 def unchecked_tasks(update: Update):
     have_done_df= utility.reading_file('have_done.csv')
     tasks_df = utility.reading_file('tasks.csv')
-    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
-    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
-    done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
+    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
+    done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==utility.get_today())].task_id.to_list()
     tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
     
     list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()

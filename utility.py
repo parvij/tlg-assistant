@@ -44,11 +44,11 @@ def reading_file(filename):
 def reading_task_to_send():
     have_done_df = reading_file('have_done.csv')
     tasks_df = reading_file('tasks.csv')
-    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
+    
 
     #started
-    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
-    done_today = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==curr_date)].task_id.to_list()
+    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=get_today())]
+    done_today = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==get_today())].task_id.to_list()
     done_once = have_done_df.task_id.to_list()
     tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_today)]
     tasks_to_send3 = tasks_to_send2[(tasks_to_send1.repeat !='Once') | (tasks_to_send1.id.apply(lambda x: x not in done_once))]
@@ -59,8 +59,7 @@ def reading_task_to_send():
 
 def reading_busy_time():
     df = reading_file('busy_time.csv')
-    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
-    df = df[ df.apply(lambda r: (r.start_date!=r.start_date or r.start_date<curr_date )and (r.end_date!=r.end_date or r.end_date<curr_date ),axis=1) ]
+    df = df[ df.apply(lambda r: (r.start_date!=r.start_date or r.start_date<get_today() )and (r.end_date!=r.end_date or r.end_date<get_today() ),axis=1) ]
     df.start_time = df.start_time.apply(lambda x: datetime.datetime.strptime(x if x == x else '0:0', '%H:%M').time())
     df.end_time = df.end_time.apply(lambda x: datetime.datetime.strptime(x if x==x else '23:59', '%H:%M').time())
     return df
@@ -68,3 +67,9 @@ def reading_busy_time():
 #####################################################################################
 def send_message(msg):
     bot.sendMessage(91686406,msg)
+    
+def get_today():
+    return (datetime.datetime.now().astimezone(timezone('America/Toronto'))+ datetime.timedelta(hours=2)).date()
+
+def get_time():
+    return datetime.datetime.now().astimezone(timezone('America/Toronto')).time()
