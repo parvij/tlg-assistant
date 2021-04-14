@@ -36,7 +36,7 @@ def checking(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text.isnumeric():
         df = utility.reading_file('have_done.csv')
-        df = df.append({'task_id': text,'date':utility.get_today().strftime('%m/%d/%Y')}, ignore_index=True)
+        df = df.append({'task_id': int(text),'date':utility.get_today().strftime('%m/%d/%Y')}, ignore_index=True)
         utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
     else:
@@ -77,10 +77,13 @@ def all_tasks(update):
 def unchecked_tasks(update: Update):
     have_done_df= utility.reading_file('have_done.csv')
     tasks_df = utility.reading_file('tasks.csv')
-
+    print(have_done_df)
     tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
-    done_tody = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==utility.get_today())].task_id.to_list()
-    tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_tody)]
+    print(11111,tasks_to_send1)
+    done_today = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==utility.get_today())].task_id.to_list()
+    print(22222,done_today)
+    tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: str(x) not in str(done_today))]
+    print(33333,tasks_to_send2)
     
     list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
 

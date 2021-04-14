@@ -45,16 +45,27 @@ def reading_task_to_send():
     have_done_df = reading_file('have_done.csv')
     tasks_df = reading_file('tasks.csv')
     
-
-    #started
-    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=get_today())]
     done_today = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==get_today())].task_id.to_list()
+
     done_once = have_done_df.task_id.to_list()
-    tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: x not in done_today)]
-    tasks_to_send3 = tasks_to_send2[(tasks_to_send1.repeat !='Once') | (tasks_to_send1.id.apply(lambda x: x not in done_once))]
+    
+    how_many_time_done = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()>get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
+    how_many_time_done.columns = ['id','cnt_done']
+    how_many_time_done.id = how_many_time_done.id.apply(int)
 
+    # started
+    df1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=get_today())]
+    # have_not_done
+    df2 = df1[df1.id.apply(lambda x: x not in done_today)]
+    # filter the "Once" which have done
+    df3 = df2[(df2.repeat !='Once') | (df2.id.apply(lambda x: x not in done_once))]
 
-    tasks_to_send = tasks_to_send3[(tasks_to_send3.Periority == tasks_to_send3.Periority.min())|(tasks_to_send3.repeat=='Once')]
+    # join with how_many_time_done
+    df4 = pd.merge(df3,how_many_time_done,on='id',how='left')
+    df4.cnt_done.fillna(0,inplace=True)
+
+    # min periority or Once    
+    tasks_to_send = pd.concat([df4.sort_values(['Periority','cnt_done']).head(5),df4[df4.repeat=='Once']]).drop_duplicates().reset_index(drop=True).sort_values(['Periority','cnt_done'])
     return tasks_to_send
 
 def reading_busy_time():
