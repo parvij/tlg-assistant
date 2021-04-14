@@ -24,7 +24,7 @@ def writing_file(df,filename):
         s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
         s3_resource.Object(bucket, filename).put(Body=csv_buffer.getvalue())
     except:
-        df.to_csv(filename)
+        df.to_csv(filename,index=False)
 
 def reading_file(filename):
     print('reading file')

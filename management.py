@@ -8,6 +8,7 @@ Created on Sat Apr 10 10:44:02 2021
 import utility
 from pytz import timezone
 import datetime
+
 import os
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
@@ -20,11 +21,11 @@ from telegram.ext import (
 )
 
 
-SELECTING_COMMAND, CHECKING = range(2)
+SELECTING_COMMAND, CHECKING, NEW_TASK = range(3)
 
 def start(update: Update, context: CallbackContext) -> int:
     print('start')
-    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'Sleep..', 'Checking..']]
+    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'New Task', 'Checking..']]
     update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
 
@@ -41,6 +42,19 @@ def checking(update: Update, context: CallbackContext) -> int:
         update.message.reply_text('Done')
     else:
         update.message.reply_text('It is not a number')
+    
+    return SELECTING_COMMAND
+
+def adding_task(update: Update, context: CallbackContext) -> int:
+    print('adding_task')
+    text = update.message.text
+    df = utility.reading_file('tasks.csv')
+    curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
+    #id	name	time_cost	time	repeat	start	weekend	Why	Periority
+    
+    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':curr_date.strftime('%m/%d/%Y'),'Periority':1}, ignore_index=True)
+    utility.writing_file(df,'tasks.csv')
+    update.message.reply_text('Done')
     
     return SELECTING_COMMAND
     
@@ -78,6 +92,7 @@ def unchecked_tasks(update: Update):
 
 def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
+    print('%',text)
     if text == 'List of all Tasks':
         msg = all_tasks(Update)
         update.message.reply_text(msg)
@@ -86,9 +101,9 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
         msg = unchecked_tasks(update)
         update.message.reply_text(msg)
         return SELECTING_COMMAND
-    elif text == 'Sleep..':
-        #fill later
-        return SELECTING_COMMAND
+    elif text == 'New Task':
+        update.message.reply_text('What is the task title?')
+        return NEW_TASK
     elif text == 'Checking..':
         update.message.reply_text('which tasks you have done?')
         return CHECKING
@@ -98,7 +113,6 @@ def main() -> None:
     # Make sure to set use_context=True to use the new context based callbacks
     # Post version 12 this will no longer be necessary
     updater = Updater(os.environ['tlg_token'], use_context=True)
-
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
@@ -106,8 +120,9 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|Sleep..|Checking..)$'), cat_selecting)],
+            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..)$'), cat_selecting)],
             CHECKING: [MessageHandler(Filters.text, checking)],
+            NEW_TASK: [MessageHandler(Filters.text, adding_task)],
 #            PHOTO: [MessageHandler(Filters.photo, photo), CommandHandler('skip', skip_photo)],
 #            LOCATION: [
 #                MessageHandler(Filters.location, location),
