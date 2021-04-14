@@ -34,10 +34,10 @@ def checking(update: Update, context: CallbackContext) -> int:
     print('cat selecting')
     text = update.message.text
     if text.isnumeric():
-        df = utility.reading_have_done()
+        df = utility.reading_file('have_done.csv')
         curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
         df = df.append({'task_id': text,'date':curr_date.strftime('%m/%d/%Y')}, ignore_index=True)
-        utility.write_have_done(df)
+        utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
     else:
         update.message.reply_text('It is not a number')
@@ -55,7 +55,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def all_tasks(update):
-    tasks_df = utility.reading_tasks()
+    tasks_df = utility.reading_file('tasks.csv')
     curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
@@ -64,8 +64,8 @@ def all_tasks(update):
     return '\n'.join(list_all_tasks)
 
 def unchecked_tasks(update: Update):
-    have_done_df= utility.reading_have_done()
-    tasks_df = utility.reading_tasks()
+    have_done_df= utility.reading_file('have_done.csv')
+    tasks_df = utility.reading_file('tasks.csv')
     curr_date = datetime.datetime.now().astimezone(timezone('America/Denver')).date()
 
     tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=curr_date)]
