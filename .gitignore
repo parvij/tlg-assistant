@@ -2,3 +2,4 @@
 /init.py
 __pycache__/*
 Copy AWS files to local.py
+____Paste local files to AWS.py

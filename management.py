@@ -36,7 +36,7 @@ def checking(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     if text.isnumeric():
         df = utility.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':utility.get_today().strftime('%m/%d/%Y')}, ignore_index=True)
+        df = df.append({'task_id': int(text),'date':utility.get_today()}, ignore_index=True)
         utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
     else:
@@ -50,7 +50,7 @@ def adding_task(update: Update, context: CallbackContext) -> int:
     df = utility.reading_file('tasks.csv')
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
     
-    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':utility.get_today().strftime('%m/%d/%Y'),'Periority':1}, ignore_index=True)
+    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':utility.get_today(),'Periority':1}, ignore_index=True)
     utility.writing_file(df,'tasks.csv')
     update.message.reply_text('Done')
     
@@ -69,7 +69,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def all_tasks():
     tasks_df = utility.reading_file('tasks.csv')
 
-    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
+    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x: x <=utility.get_today())]
     list_all_tasks = tasks_to_send.apply(lambda r: str(r['id'])+'_'+r['name'],axis=1).to_list()
 
     return '\n'.join(list_all_tasks)
@@ -108,7 +108,7 @@ def main() -> None:
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler('start', start),MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..)$'), cat_selecting)],
         states={
             SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..)$'), cat_selecting)],
             CHECKING: [MessageHandler(Filters.text, checking)],
