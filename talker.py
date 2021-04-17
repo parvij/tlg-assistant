@@ -8,7 +8,7 @@ Created on Sat Apr 10 10:44:02 2021
 try:
     import utility
     utility.send_message('started')
-
+    import os
     import time
     from pytz import timezone
     import datetime
@@ -25,7 +25,7 @@ try:
                     for idx,row in tasks_to_send.iterrows():
                         utility.send_message(str(row['id'])+'  '+row['name'])
                         print(row['name'])
-           time.sleep(3000)                   
+           time.sleep(int(os.environ['sleep_time']))                   
 except Exception as e:
     utility.send_message(str(e))
     

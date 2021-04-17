@@ -14,27 +14,47 @@ import datetime
 import telepot
 bot = telepot.Bot(os.environ['tlg_token'])
 
-
-def writing_file(df,filename):
+def writing_file(df,filename, env = None):
     print('writeing file')
-    try:
+    
+    if not env:
+        env = os.environ['env']
+        
+    if env == 'heroku':
         bucket = 'parvij-assistance'  # already created on S3
         csv_buffer = StringIO()
         df.to_csv(csv_buffer,index=False)
         s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
         s3_resource.Object(bucket, filename).put(Body=csv_buffer.getvalue())
-    except:
+    elif env == 'local':
         df.to_csv(filename,index=False)
+    else:
+        print(f'problem with reading ENV. The ENV is {env}')
+        raise
 
-def reading_file(filename):
+def reading_file(filename, env = None):
     print('reading file')
-    try:
+    print(env!=env)
+    if not env:
+        env = os.environ['env']
+        
+    if env == 'heroku':
         s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
         s3_object = s3_resource.Object(bucket_name='parvij-assistance', key=filename)
         s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
         df = pd.read_csv(s3_data)
-    except:
+    elif env == 'local':
         df = pd.read_csv(filename)
+    else:
+        print(f'problem with reading ENV. The ENV is {env}')
+        raise
+    
+    for c in ['id','task_id','Priotory','']:
+        try:
+            df[c] = df[c].apply(int)
+        except:
+            pass
+    
     return df
 
 ################################################################
@@ -59,7 +79,7 @@ def reading_task_to_send():
     df2 = df1[df1.id.apply(lambda x: x not in done_today)]
     # filter the "Once" which have done
     df3 = df2[(df2.repeat !='Once') | (df2.id.apply(lambda x: x not in done_once))]
-
+    print(df3)
     # join with how_many_time_done
     df4 = pd.merge(df3,how_many_time_done,on='id',how='left')
     df4.cnt_done.fillna(0,inplace=True)
@@ -80,7 +100,12 @@ def send_message(msg):
     bot.sendMessage(91686406,msg)
     
 def get_today():
-    return (datetime.datetime.now().astimezone(timezone('America/Toronto'))+ datetime.timedelta(hours=2)).date()
+    return (datetime.datetime.now().astimezone(timezone('America/Toronto'))+ datetime.timedelta(hours=-2)).date()
 
 def get_time():
     return datetime.datetime.now().astimezone(timezone('America/Toronto')).time()
+
+
+
+
+    
