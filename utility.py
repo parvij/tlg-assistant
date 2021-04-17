@@ -78,7 +78,6 @@ def reading_task_to_send():
     df2 = df1[df1.id.apply(lambda x: x not in done_today)]
     # filter the "Once" which have done
     df3 = df2[(df2.repeat !='Once') | (df2.id.apply(lambda x: x not in done_once))]
-    print(df3)
     # join with how_many_time_done
     df4 = pd.merge(df3,how_many_time_done,on='id',how='left')
     df4.cnt_done.fillna(0,inplace=True)
