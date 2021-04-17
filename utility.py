@@ -34,7 +34,6 @@ def writing_file(df,filename, env = None):
 
 def reading_file(filename, env = None):
     print('reading file')
-    print(env!=env)
     if not env:
         env = os.environ['env']
         
