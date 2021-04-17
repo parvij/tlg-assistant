@@ -58,9 +58,7 @@ def reading_file(filename, env = None):
 
 ################################################################
 
-
-
-def reading_task_to_send():
+def unchecked_tasks():
     have_done_df = reading_file('have_done.csv')
     tasks_df = reading_file('tasks.csv')
     
@@ -68,16 +66,23 @@ def reading_task_to_send():
 
     done_once = have_done_df.task_id.to_list()
     
-    how_many_time_done = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()>get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
-    how_many_time_done.columns = ['id','cnt_done']
-    how_many_time_done.id = how_many_time_done.id.apply(int)
-
     # started
     df1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=get_today())]
     # have_not_done
     df2 = df1[df1.id.apply(lambda x: x not in done_today)]
     # filter the "Once" which have done
     df3 = df2[(df2.repeat !='Once') | (df2.id.apply(lambda x: x not in done_once))]
+    
+    return df3
+
+def reading_task_to_send():
+    df3 = unchecked_tasks()
+
+    have_done_df = reading_file('have_done.csv')
+    how_many_time_done = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()>get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
+    how_many_time_done.columns = ['id','cnt_done']
+    how_many_time_done.id = how_many_time_done.id.apply(int)
+
     # join with how_many_time_done
     df4 = pd.merge(df3,how_many_time_done,on='id',how='left')
     df4.cnt_done.fillna(0,inplace=True)

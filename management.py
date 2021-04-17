@@ -66,7 +66,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
     return ConversationHandler.END
 
-def all_tasks(update):
+def all_tasks():
     tasks_df = utility.reading_file('tasks.csv')
 
     tasks_to_send = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
@@ -74,17 +74,8 @@ def all_tasks(update):
 
     return '\n'.join(list_all_tasks)
 
-def unchecked_tasks(update: Update):
-    have_done_df= utility.reading_file('have_done.csv')
-    tasks_df = utility.reading_file('tasks.csv')
-    print(have_done_df)
-    tasks_to_send1 = tasks_df[tasks_df.start.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()<=utility.get_today())]
-    print(11111,tasks_to_send1)
-    done_today = have_done_df[have_done_df.date.apply(lambda x:datetime.datetime.strptime(x, '%m/%d/%Y').date()==utility.get_today())].task_id.to_list()
-    print(22222,done_today)
-    tasks_to_send2 = tasks_to_send1[tasks_to_send1.id.apply(lambda x: str(x) not in str(done_today))]
-    print(33333,tasks_to_send2)
-    
+def unchecked_tasks():
+    tasks_to_send2 = utility.unchecked_tasks()    
     list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
 
     return '\n'.join(list_unchecked_tasks)
@@ -93,11 +84,11 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     print('%',text)
     if text == 'List of all Tasks':
-        msg = all_tasks(Update)
+        msg = all_tasks()
         update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'List of Unchecked':
-        msg = unchecked_tasks(update)
+        msg = unchecked_tasks()
         update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'New Task':
