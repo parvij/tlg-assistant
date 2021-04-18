@@ -10,7 +10,7 @@ import os
 from pytz import timezone
 import datetime
 from datetime import timedelta
-
+import dateutil.parser
 
 import telepot
 bot = telepot.Bot(os.environ['tlg_token'])
@@ -56,9 +56,9 @@ def reading_file(filename, env = None):
             pass
     for c in ['start','date','end']:
         try:
-            df[c] = df[c].apply(lambda x:datetime.datetime.strptime(x, '%Y-%m-%d').date())
+            df[c] = df[c].apply(lambda x:dateutil.parser.parse(x).date())
         except:
-            pass
+            print(f'{c} was not a date type')
     
     return df
 
