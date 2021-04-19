@@ -21,24 +21,36 @@ from telegram.ext import (
 )
 
 
-SELECTING_COMMAND, CHECKING, NEW_TASK = range(3)
+SELECTING_COMMAND, CHECKING, NEW_TASK, POSTPONING = range(4)
 
 def start(update: Update, context: CallbackContext) -> int:
     print('start')
-    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'New Task', 'Checking..']]
+    reply_keyboard = [['List of all Tasks', 'List of Unchecked'],[ 'New Task', 'Checking..'],['Postponing..']]
     update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
 
     return SELECTING_COMMAND
 
 def checking(update: Update, context: CallbackContext) -> int:
-    print('cat selecting')
     text = update.message.text
     if text.isnumeric():
         df = utility.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':utility.get_today()}, ignore_index=True)
+        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':'Done'}, ignore_index=True)
         utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
+    else:
+        update.message.reply_text('It is not a number')
+    
+    return SELECTING_COMMAND
+
+def postponing(update: Update, context: CallbackContext) -> int:
+    print(1)
+    text = update.message.text
+    if text.isnumeric():
+        df = utility.reading_file('have_done.csv')
+        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':'Postponed'}, ignore_index=True)
+        utility.writing_file(df,'have_done.csv')
+        update.message.reply_text('Postponed')
     else:
         update.message.reply_text('It is not a number')
     
@@ -97,6 +109,10 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     elif text == 'Checking..':
         update.message.reply_text('which tasks you have done?')
         return CHECKING
+    elif text == 'Postponing..':
+        update.message.reply_text('which tasks you have done?')
+        return POSTPONING
+    
 
 def main() -> None:
     # Create the Updater and pass it your bot's token.
@@ -108,10 +124,11 @@ def main() -> None:
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start),MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..)$'), cat_selecting)],
+        entry_points=[CommandHandler('start', start),MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..|Postponing..)$'), cat_selecting)],
         states={
-            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..)$'), cat_selecting)],
+            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(List of all Tasks|List of Unchecked|New Task|Checking..|Postponing..)$'), cat_selecting)],
             CHECKING: [MessageHandler(Filters.text, checking)],
+            POSTPONING: [MessageHandler(Filters.text, postponing)],
             NEW_TASK: [MessageHandler(Filters.text, adding_task)],
 #            PHOTO: [MessageHandler(Filters.photo, photo), CommandHandler('skip', skip_photo)],
 #            LOCATION: [

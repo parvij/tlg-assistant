@@ -84,6 +84,7 @@ def done_period(val):
 
 def unchecked_tasks():
     have_done_df = reading_file('have_done.csv')
+    have_done_df = have_done_df[(have_done_df.type != 'Postponed') | (have_done_df.date == get_today())]
     last_have_done_df = have_done_df.groupby(['task_id']).date.max().reset_index()
     last_have_done_df.columns = ['id','done_date']
     
