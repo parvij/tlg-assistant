@@ -15,6 +15,9 @@ import dateutil.parser
 import telepot
 bot = telepot.Bot(os.environ['tlg_token'])
 
+
+
+
 def writing_file(df,filename, env = None):
     print('writeing file')
     
@@ -89,7 +92,22 @@ def unchecked_tasks():
     last_have_done_df.columns = ['id','done_date']
     
     tasks_df = reading_file('tasks.csv')
+    times_df = reading_file('times.csv')
+    
+    tasks_times_df = pd.merge(tasks_df, times_df, left_on='duration', right_on='name', how='left', suffixes=('', '_y'))
+    tasks_times_df['start time'] = tasks_times_df['start time'].apply(int)
+    tasks_times_df['end time'] = tasks_times_df['end time'].apply(int)
+    
+    tasks_for_now = tasks_times_df[(get_time().hour >= tasks_times_df['start time']) & 
+                                   (get_time().hour <= tasks_times_df['end time']) & 
+                                   (tasks_times_df['days'].apply(lambda x: str(get_today().weekday()) in x))]
+    
+    tasks_df = tasks_for_now.drop(['id_y','name_y','start time','end time', 'days'],axis=1).drop_duplicates()
+    
+    
     started_tasks = tasks_df[tasks_df.start.apply(lambda x: x <= get_today())]
+    
+    
     tasks_df_with_done = pd.merge(started_tasks, last_have_done_df, how='left',on='id')
     tasks_df_with_done['done_date'].fillna(datetime.datetime.strptime('1900', '%Y').date(),inplace=True)
     full_tasks_df = tasks_df_with_done
