@@ -23,9 +23,11 @@ try:
                     tasks_to_send = utility.reading_task_to_send()
                     print('$$$',tasks_to_send)
                     msg1 = '\n'.join([str(row['id'])+'  '+row['name']   for idx,row in tasks_to_send[tasks_to_send.repeat != 'Once'].iterrows()])
-                    utility.send_message(msg1)
+                    if msg1!= '':
+                        utility.send_message(msg1)
                     msg2 = '\n'.join([str(row['id'])+'  '+row['name']   for idx,row in tasks_to_send[tasks_to_send.repeat == 'Once'].iterrows()])
-                    utility.send_message(msg2)
+                    if msg2!= '':
+                        utility.send_message(msg2)
 
            time.sleep(int(os.environ['sleep_time']))                   
 except Exception as e:
