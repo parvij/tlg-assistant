@@ -40,6 +40,10 @@ def change_status(val,text,update):
         update.message.reply_text('Done')
     else:
         update.message.reply_text('It is not a number')
+
+    msg = unchecked_tasks()
+    if msg!='':
+        update.message.reply_text(msg)
     
 
 def checking(update: Update, context: CallbackContext) -> int:
@@ -95,11 +99,13 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     print('%',text)
     if text == 'List of all Tasks':
         msg = all_tasks()
-        update.message.reply_text(msg)
+        if msg != '':
+            update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'List of Unchecked':
         msg = unchecked_tasks()
-        update.message.reply_text(msg)
+        if msg!='':
+            update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'New Task':
         update.message.reply_text('What is the task title?')

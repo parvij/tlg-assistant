@@ -15,7 +15,7 @@ try:
     
     if __name__ == "__main__":
         while True:
-           if datetime.datetime.strptime('7:00', '%H:%M').time() < utility.get_time() < datetime.datetime.strptime('23:00', '%H:%M').time():
+           if datetime.datetime.strptime('6:00', '%H:%M').time() < utility.get_time() < datetime.datetime.strptime('24:00', '%H:%M').time():
                 busy_time_df = utility.reading_busy_time()
                 print('###',busy_time_df.apply(lambda r:r.start_time < utility.get_time() < r.end_time, axis=1).sum())
                 print(utility.get_time(),busy_time_df.start_time,busy_time_df.end_time)
