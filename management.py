@@ -31,29 +31,26 @@ def start(update: Update, context: CallbackContext) -> int:
 
     return SELECTING_COMMAND
 
-def checking(update: Update, context: CallbackContext) -> int:
-    text = update.message.text
+def change_status(val,text,update):
     if text.isnumeric():
         df = utility.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':'Done'}, ignore_index=True)
+        user_id = update['message']['chat']['id']
+        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':val,'user':user_id}, ignore_index=True)
         utility.writing_file(df,'have_done.csv')
         update.message.reply_text('Done')
     else:
         update.message.reply_text('It is not a number')
     
+
+def checking(update: Update, context: CallbackContext) -> int:
+    text = update.message.text
+    change_status('Done',text,update)
     return SELECTING_COMMAND
 
 def postponing(update: Update, context: CallbackContext) -> int:
     print(1)
     text = update.message.text
-    if text.isnumeric():
-        df = utility.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':'Postponed'}, ignore_index=True)
-        utility.writing_file(df,'have_done.csv')
-        update.message.reply_text('Postponed')
-    else:
-        update.message.reply_text('It is not a number')
-    
+    change_status('Postponed',text,update)    
     return SELECTING_COMMAND
 
 def adding_task(update: Update, context: CallbackContext) -> int:
@@ -61,8 +58,8 @@ def adding_task(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     df = utility.reading_file('tasks.csv')
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
-    
-    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start':utility.get_today(),'Periority':1}, ignore_index=True)
+    user_id = update['message']['chat']['id']
+    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start_date':utility.get_today(),'duration':'Free time','Periority':1,'user':user_id}, ignore_index=True)
     utility.writing_file(df,'tasks.csv')
     update.message.reply_text('Done')
     
@@ -93,6 +90,7 @@ def unchecked_tasks():
     return '\n'.join(list_unchecked_tasks)
 
 def cat_selecting(update: Update, context: CallbackContext) -> int:
+    print(update['message']['chat']['id'])
     text = update.message.text
     print('%',text)
     if text == 'List of all Tasks':
