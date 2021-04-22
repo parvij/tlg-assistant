@@ -136,7 +136,9 @@ def reading_task_to_send():
     df4.cnt_done.fillna(0,inplace=True)
 
     # min periority or Once    
-    tasks_to_send = pd.concat([df4.sort_values(['Periority','cnt_done']).head(5),df4[df4.repeat=='Once']]).drop_duplicates().reset_index(drop=True).sort_values(['Periority','cnt_done'])
+    tasks_to_send = pd.concat([df4[df4.repeat!='Once'].sort_values(['Periority','cnt_done']).head(5),
+                               df4[df4.repeat=='Once']]
+                              ).reset_index(drop=True).sort_values(['Periority','cnt_done'])
     print('reading_task_to_send done.')
     return tasks_to_send
 
