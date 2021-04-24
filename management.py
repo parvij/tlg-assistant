@@ -5,10 +5,6 @@ Created on Sat Apr 10 10:44:02 2021
 @author: Parviz.Asoodehfard
 """
 
-import utility
-from pytz import timezone
-import datetime
-
 import os
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
@@ -19,9 +15,21 @@ from telegram.ext import (
     ConversationHandler,
     CallbackContext,
 )
+import business_layer as bl
+
+
+def log(e,msg):
+    print('Error:',msg,'\n',str(e))
 
 
 SELECTING_COMMAND, CHECKING, NEW_TASK, POSTPONING = range(4)
+
+
+def msg_validate(msg):
+    msg = str(msg)
+    if msg=='':
+        msg = 'No Result'
+    return msg
 
 def start(update: Update, context: CallbackContext) -> int:
     print('start')
@@ -32,18 +40,14 @@ def start(update: Update, context: CallbackContext) -> int:
     return SELECTING_COMMAND
 
 def change_status(val,text,update):
-    if text.isnumeric():
-        df = utility.reading_file('have_done.csv')
-        user_id = update['message']['chat']['id']
-        df = df.append({'task_id': int(text),'date':utility.get_today(),'type':val,'user':user_id}, ignore_index=True)
-        utility.writing_file(df,'have_done.csv')
-        update.message.reply_text('Done')
-    else:
-        update.message.reply_text('It is not a number')
-
-    msg = unchecked_tasks()
-    if msg!='':
-        update.message.reply_text(msg)
+    user_id = update['message']['chat']['id']
+    try:
+        msg = bl.change_status(val,text,user_id)
+    except Exception as e:
+        log(e,'change_status()')
+        msg = 'Sorry, right now we faced a difficulty.'
+    msg = msg_validate(msg)
+    update.message.reply_text(msg)
     
 
 def checking(update: Update, context: CallbackContext) -> int:
@@ -52,20 +56,20 @@ def checking(update: Update, context: CallbackContext) -> int:
     return SELECTING_COMMAND
 
 def postponing(update: Update, context: CallbackContext) -> int:
-    print(1)
     text = update.message.text
     change_status('Postponed',text,update)    
     return SELECTING_COMMAND
 
 def adding_task(update: Update, context: CallbackContext) -> int:
-    print('adding_task')
     text = update.message.text
-    df = utility.reading_file('tasks.csv')
-    #id	name	time_cost	time	repeat	start	weekend	Why	Periority
     user_id = update['message']['chat']['id']
-    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start_date':utility.get_today(),'duration':'Free time','Periority':1,'user':user_id}, ignore_index=True)
-    utility.writing_file(df,'tasks.csv')
-    update.message.reply_text('Done')
+    try:
+        msg = bl.adding_task(text,user_id)
+    except Exception as e:
+        log(e,'adding_task()')
+        msg = 'Sorry, right now we faced a difficulty.'
+    msg = msg_validate(msg)
+    update.message.reply_text(msg)
     
     return SELECTING_COMMAND
     
@@ -79,33 +83,29 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
     return ConversationHandler.END
 
-def all_tasks():
-    tasks_df = utility.reading_file('tasks.csv')
-
-    tasks_to_send = tasks_df[tasks_df.start.apply(lambda x: x <=utility.get_today())]
-    list_all_tasks = tasks_to_send.apply(lambda r: str(r['id'])+'_'+r['name'],axis=1).to_list()
-
-    return '\n'.join(list_all_tasks)
-
-def unchecked_tasks():
-    tasks_to_send2 = utility.unchecked_tasks()    
-    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
-
-    return '\n'.join(list_unchecked_tasks)
 
 def cat_selecting(update: Update, context: CallbackContext) -> int:
-    print(update['message']['chat']['id'])
+    user_id = update['message']['chat']['id']
     text = update.message.text
     print('%',text)
     if text == 'List of all Tasks':
-        msg = all_tasks()
-        if msg != '':
-            update.message.reply_text(msg)
+        try:
+            msg = bl.all_tasks()
+        except Exception as e:
+            log(e,'all_tasks() in List of all Tasks')
+            msg = 'Sorry, right now we faced a difficulty.'        
+        msg = msg_validate(msg)
+        update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'List of Unchecked':
-        msg = unchecked_tasks()
-        if msg!='':
-            update.message.reply_text(msg)
+        print('management ..')
+        try:
+            msg = bl.unchecked_tasks_msg(user_id)
+        except Exception as e:
+            log(e,'unchecked_tasks_msg() in List of Unchecked')
+            msg = 'Sorry, right now we faced a difficulty.'
+        msg = msg_validate(msg)
+        update.message.reply_text(msg)
         return SELECTING_COMMAND
     elif text == 'New Task':
         update.message.reply_text('What is the task title?')

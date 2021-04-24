@@ -1,72 +1,16 @@
-try:
-    import init
-except:
-    pass
-import pandas as pd
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr 23 18:21:07 2021
 
-import boto3
-from io import StringIO  # python3 (or BytesIO for python2)
-import os
+@author: Parviz.Asoodehfard
+"""
+
+
 from pytz import timezone
 import datetime
 from datetime import timedelta
-import dateutil.parser
-
-import telepot
-bot = telepot.Bot(os.environ['tlg_token'])
-
-
-
-
-def writing_file(df,filename, env = None):
-    print('writeing file')
-    
-    if not env:
-        env = os.environ['env']
-        
-    if env == 'heroku':
-        bucket = 'parvij-assistance'  # already created on S3
-        csv_buffer = StringIO()
-        df.to_csv(csv_buffer,index=False)
-        s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-        s3_resource.Object(bucket, filename).put(Body=csv_buffer.getvalue())
-    elif env == 'local':
-        df.to_csv(filename,index=False)
-    else:
-        print(f'problem with reading ENV. The ENV is {env}')
-        raise
-
-def reading_file(filename, env = None):
-    print(f'reading file {filename}')
-    if not env:
-        env = os.environ['env']
-        
-    if env == 'heroku':
-        s3_resource = boto3.resource('s3',aws_access_key_id=os.environ['aws_access_key_id'],aws_secret_access_key=os.environ['aws_secret_access_key'])
-        s3_object = s3_resource.Object(bucket_name='parvij-assistance', key=filename)
-        s3_data = StringIO(s3_object.get()['Body'].read().decode('utf-8'))
-        df = pd.read_csv(s3_data)
-    elif env == 'local':
-        df = pd.read_csv(filename)
-    else:
-        print(f'problem with reading ENV. The ENV is {env}')
-        raise
-    
-    for c in ['id','task_id','Priotory','']:
-        try:
-            df[c] = df[c].apply(int)
-        except:
-            pass
-    for c in df.columns:
-        if 'date' in c:
-            try:
-                df[c] = df[c].apply(lambda x:dateutil.parser.parse(x).date())
-            except:
-                print(f'{c} was not a date type. sample:\n',df.iloc[0])
-                
-    print('reading done.')
-    return df
-
+import data_layer as dl
+import pandas as pd
 ################################################################
 
 def done_period(val):
@@ -87,15 +31,15 @@ def done_period(val):
     else:
         return get_today()
 
-def unchecked_tasks():
+def unchecked_tasks(user_id):
     print('starting unchecked_tasks')
-    have_done_df = reading_file('have_done.csv')
+    have_done_df = dl.reading_file('have_done.csv',user_id = user_id)
     have_done_df = have_done_df[(have_done_df.type != 'Postponed') | (have_done_df.date == get_today())]
     last_have_done_df = have_done_df.groupby(['task_id']).date.max().reset_index()
     last_have_done_df.columns = ['id','done_date']
     
-    tasks_df = reading_file('tasks.csv')
-    times_df = reading_file('times.csv')
+    tasks_df = dl.reading_file('tasks.csv',user_id = user_id)
+    times_df = dl.reading_file('times.csv')
     print('1')
     tasks_times_df = pd.merge(tasks_df, times_df, left_on='duration', right_on='name', how='left', suffixes=('', '_y'))
     tasks_times_df['start time'] = tasks_times_df['start time'].fillna(0).apply(int)
@@ -107,9 +51,8 @@ def unchecked_tasks():
     print('3')    
     tasks_df = tasks_for_now.drop(['id_y','name_y','start time','end time', 'days'],axis=1).drop_duplicates()
     
-    print('4')    
-    started_tasks = tasks_df[tasks_df.start_date.apply(lambda x: x <= get_today())]
-    
+    print('4')  
+    started_tasks = tasks_df.loc[tasks_df.start_date.apply(lambda x: x <= get_today())]
     print('5')
     tasks_df_with_done = pd.merge(started_tasks, last_have_done_df, how='left',on='id')
     tasks_df_with_done['done_date'].fillna(datetime.datetime.strptime('1900', '%Y').date(),inplace=True)
@@ -118,15 +61,15 @@ def unchecked_tasks():
     print('6')
     
     df_final = full_tasks_df[full_tasks_df.eval('done_date < expect_to_done')]
-    
+    print(df_final)
     print('unchecked_tasks done.')
     return df_final 
 
-def reading_task_to_send():
+def reading_task_to_send(user_id):
     print('starting reading_task_to_send')
-    df3 = unchecked_tasks()
+    df3 = unchecked_tasks(user_id)
 
-    have_done_df = reading_file('have_done.csv')
+    have_done_df = dl.reading_file('have_done.csv')
     how_many_time_done = have_done_df[have_done_df.date.apply(lambda x: x >get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
     how_many_time_done.columns = ['id','cnt_done']
     how_many_time_done.id = how_many_time_done.id.apply(int)
@@ -143,16 +86,16 @@ def reading_task_to_send():
     return tasks_to_send
 
 def reading_busy_time():
-    df = reading_file('busy_time.csv')
+    df = dl.reading_file('busy_time.csv')
     df = df[ df.apply(lambda r: (r.start_date!=r.start_date or r.start_date<get_today() )and (r.end_date!=r.end_date or r.end_date<get_today() ),axis=1) ]
     df.start_time = df.start_time.apply(lambda x: datetime.datetime.strptime(x if x == x else '0:0', '%H:%M').time())
     df.end_time = df.end_time.apply(lambda x: datetime.datetime.strptime(x if x==x else '23:59', '%H:%M').time())
     return df
 
-#####################################################################################
-def send_message(msg):
-    bot.sendMessage(91686406,msg)
-    
+def user_id_list():
+    df = dl.reading_file('users.csv')
+    return df.id.to_list()
+
 def get_today():
     return (datetime.datetime.now().astimezone(timezone('America/Toronto'))+ datetime.timedelta(hours=-2)).date()
 
@@ -164,4 +107,36 @@ def get_time():
 
 
 
+def unchecked_tasks_msg(user_id):
+    tasks_to_send2 = unchecked_tasks(user_id)    
+    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
+
+    return '\n'.join(list_unchecked_tasks)
+
+def change_status(val,text,user_id):
+    if text.isnumeric():
+        df = dl.reading_file('have_done.csv')
+        df = df.append({'task_id': int(text),'date':get_today(),'type':val,'group_id':user_id}, ignore_index=True)
+        dl.writing_file(df,'have_done.csv')
+        return 'Done'
+    else:
+        return 'It is not a number'
+
+    msg = unchecked_tasks_msg()
+    if msg!='':
+        return msg
     
+def adding_task(text,user_id):
+    
+    df = dl.reading_file('tasks.csv')
+    #id	name	time_cost	time	repeat	start	weekend	Why	Periority
+    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start_date':get_today(),'duration':'Free time','Periority':1,'group_id':user_id}, ignore_index=True)
+    dl.writing_file(df,'tasks.csv')
+    msg = 'Done'
+    
+    return msg 
+
+def all_task():
+    return 'not available now'
+
+
