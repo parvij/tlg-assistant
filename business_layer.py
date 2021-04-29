@@ -31,59 +31,57 @@ def done_period(val):
     else:
         return get_today()
 
-def unchecked_tasks(user_id):
+def get_tasks_list(user_id,category='not_done & current & start_end & short'):
+    category = category.split(' & ')
     print('starting unchecked_tasks')
-    have_done_df = dl.reading_file('have_done.csv',user_id = user_id)
-    have_done_df = have_done_df[(have_done_df.type != 'Postponed') | (have_done_df.date == get_today())]
-    last_have_done_df = have_done_df.groupby(['task_id']).date.max().reset_index()
-    last_have_done_df.columns = ['id','done_date']
     
     tasks_df = dl.reading_file('tasks.csv',user_id = user_id)
-    times_df = dl.reading_file('times.csv')
-    print('1')
-    tasks_times_df = pd.merge(tasks_df, times_df, left_on='duration', right_on='name', how='left', suffixes=('', '_y'))
-    tasks_times_df['start time'] = tasks_times_df['start time'].fillna(0).apply(int)
-    tasks_times_df['end time'] = tasks_times_df['end time'].fillna(24).apply(int)
-    print('2')    
-    tasks_for_now = tasks_times_df[(get_time().hour >= tasks_times_df['start time']) & 
-                                   (get_time().hour <= tasks_times_df['end time']) & 
-                                   (tasks_times_df['days'].apply(lambda x: str(get_today().weekday()) in str(x)))]
-    print('3')    
-    tasks_df = tasks_for_now.drop(['id_y','name_y','start time','end time', 'days'],axis=1).drop_duplicates()
+
+    if 'current' in category:
+        times_df = dl.reading_file('times.csv')
+        tasks_times_df = pd.merge(tasks_df, times_df, left_on='duration', right_on='name', how='left', suffixes=('', '_y'))
+        tasks_times_df['start time'] = tasks_times_df['start time'].fillna(0).apply(int)
+        tasks_times_df['end time'] = tasks_times_df['end time'].fillna(24).apply(int)
+        tasks_for_now = tasks_times_df[(get_time().hour >= tasks_times_df['start time']) & 
+                                       (get_time().hour <= tasks_times_df['end time']) & 
+                                       (tasks_times_df['days'].apply(lambda x: str(get_today().weekday()) in str(x)))]
+        tasks_df = tasks_for_now.drop(['id_y','name_y','start time','end time', 'days'],axis=1).drop_duplicates()
     
-    print('4')  
-    started_tasks = tasks_df.loc[tasks_df.start_date.apply(lambda x: x <= get_today())]
-    print('5')
-    tasks_df_with_done = pd.merge(started_tasks, last_have_done_df, how='left',on='id')
-    tasks_df_with_done['done_date'].fillna(datetime.datetime.strptime('1900', '%Y').date(),inplace=True)
-    full_tasks_df = tasks_df_with_done
-    full_tasks_df['expect_to_done'] = full_tasks_df.repeat.apply(done_period)
-    print('6')
+    if 'start_end' in category:
+        tasks_df = tasks_df.loc[tasks_df.start_date.apply(lambda x: x <= get_today())]
     
-    df_final = full_tasks_df[full_tasks_df.eval('done_date < expect_to_done')]
-    print(df_final)
+
+    if 'not_done' in category:
+        have_done_df = dl.reading_file('have_done.csv',user_id = user_id)
+        have_done_df = have_done_df[(have_done_df.type != 'Postponed') | (have_done_df.date == get_today())]
+        last_have_done_df = have_done_df.groupby(['task_id']).date.max().reset_index()
+        last_have_done_df.columns = ['id','done_date']
+        
+        tasks_df_with_done = pd.merge(tasks_df, last_have_done_df, how='left',on='id')
+        tasks_df_with_done['done_date'].fillna(datetime.datetime.strptime('1900', '%Y').date(),inplace=True)
+        full_tasks_df = tasks_df_with_done
+        full_tasks_df['expect_to_done'] = full_tasks_df.repeat.apply(done_period)
+    
+        tasks_df = full_tasks_df[full_tasks_df.eval('done_date < expect_to_done')]
+    
+    if 'short' in category:
+        have_done_df = dl.reading_file('have_done.csv')
+        how_many_time_done = have_done_df[have_done_df.date.apply(lambda x: x >get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
+        how_many_time_done.columns = ['id','cnt_done']
+        how_many_time_done.id = how_many_time_done.id.apply(int)
+    
+        # join with how_many_time_done
+        df4 = pd.merge(tasks_df,how_many_time_done,on='id',how='left')
+        df4.cnt_done.fillna(0,inplace=True)
+    
+        # min periority or Once    
+        tasks_df = pd.concat([df4[df4.repeat!='Once'].sort_values(['Periority','cnt_done']).head(5),
+                                   df4[df4.repeat=='Once']]
+                                  ).reset_index(drop=True).sort_values(['Periority','cnt_done'])    
+    
+    print(tasks_df)
     print('unchecked_tasks done.')
-    return df_final 
-
-def reading_task_to_send(user_id):
-    print('starting reading_task_to_send')
-    df3 = unchecked_tasks(user_id)
-
-    have_done_df = dl.reading_file('have_done.csv')
-    how_many_time_done = have_done_df[have_done_df.date.apply(lambda x: x >get_today()- datetime.timedelta(days=3))].task_id.value_counts().reset_index()
-    how_many_time_done.columns = ['id','cnt_done']
-    how_many_time_done.id = how_many_time_done.id.apply(int)
-
-    # join with how_many_time_done
-    df4 = pd.merge(df3,how_many_time_done,on='id',how='left')
-    df4.cnt_done.fillna(0,inplace=True)
-
-    # min periority or Once    
-    tasks_to_send = pd.concat([df4[df4.repeat!='Once'].sort_values(['Periority','cnt_done']).head(5),
-                               df4[df4.repeat=='Once']]
-                              ).reset_index(drop=True).sort_values(['Periority','cnt_done'])
-    print('reading_task_to_send done.')
-    return tasks_to_send
+    return tasks_df[['id','name']]
 
 def reading_busy_time():
     df = dl.reading_file('busy_time.csv')
@@ -104,15 +102,6 @@ def get_time():
     return datetime.datetime.now().astimezone(timezone('America/Toronto')).time()
 
 
-
-
-
-def unchecked_tasks_msg(user_id):
-    tasks_to_send2 = unchecked_tasks(user_id)    
-    list_unchecked_tasks = tasks_to_send2.apply(lambda r: str(r['id'])+'_'+r['name'] ,axis=1).to_list()
-
-    return '\n'.join(list_unchecked_tasks)
-
 def change_status(val,text,user_id):
     if text.isnumeric():
         df = dl.reading_file('have_done.csv')
@@ -121,10 +110,6 @@ def change_status(val,text,user_id):
         return 'Done'
     else:
         return 'It is not a number'
-
-    msg = unchecked_tasks_msg()
-    if msg!='':
-        return msg
     
 def adding_task(text,user_id):
     
