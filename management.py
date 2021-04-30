@@ -7,39 +7,28 @@ Created on Sat Apr 10 10:44:02 2021
 
 import os
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update,InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    MessageHandler,
-    Filters,
-    ConversationHandler,
-    CallbackContext,
-    CallbackQueryHandler
-)
+from telegram import ParseMode
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext, CallbackQueryHandler
 import business_layer as bl
 import numpy as np
-
-def log(e,msg):
-    print('Error:',msg,'\n',str(e))
+import telepot
 
 
 SELECTING_COMMAND, NEW_TASK, NEW_GROUP_TASK = range(3)
 
+########################## extra function ##########################################################
 
+def log(e,msg):
+    print('Error:',msg,'\n',str(e))
+
+''' if empty send back 'no result'''
 def msg_validate(msg):
     msg = str(msg)
     if msg=='':
         msg = 'No Result'
     return msg
 
-def start(update: Update, context: CallbackContext) -> int:
-    print('start')
-    reply_keyboard = [['Show Tasks'],[ 'New Task', 'New Group Task'],]
-    update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
-    )
-
-    return SELECTING_COMMAND
-
+''' a wrapper for change status of business_layer to prevent of failing and keep program running'''
 def change_status(val,text,update):
     user_id = update['callback_query']['message']['chat']['id']
     try:
@@ -48,38 +37,8 @@ def change_status(val,text,update):
         log(e,'change_status()')
         msg = 'Sorry, right now we faced a difficulty.'
     return msg
-    
 
-def adding_task(update: Update, context: CallbackContext,task_type='Personal') -> int:
-    text = update.message.text
-    if task_type=='Personal':
-        user_id = update['message']['chat']['id']
-    elif task_type=='Group':
-        user_id = 'G_1'
-    
-    try:
-        msg = bl.adding_task(text,user_id)
-    except Exception as e:
-        log(e,'adding_task()')
-        msg = 'Sorry, right now we faced a difficulty.'
-    msg = msg_validate(msg)
-    update.message.reply_text(msg)
-    
-    return SELECTING_COMMAND
-
-def adding_group_task(update: Update, context: CallbackContext) -> int:
-    return adding_task(update, context,'Group')
-    
-
-
-def cancel(update: Update, context: CallbackContext) -> int:
-    print('cancel')
-    update.message.reply_text(
-        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
-    )
-
-    return ConversationHandler.END
-
+''' for creating keyboard (in show tasks)'''
 def my_reshape(the_list):
     from math import sqrt
     the_list = np.array(the_list)
@@ -90,7 +49,7 @@ def my_reshape(the_list):
     return group(the_list,width)
 
 
-def showing_tasks(user_id,category = 'Current suggestion'):
+def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
     if category == 'Current suggestion':    # 'short':1,'Today':1,'current':1, done:0
         task_list = bl.get_tasks_list(user_id,'not_done & current & start_end & short')
     elif category == 'All current':         # 'short':0,'Today':1,'current':1, done:0
@@ -107,19 +66,66 @@ def showing_tasks(user_id,category = 'Current suggestion'):
     #     task_list = bl.get_tasks_list(user_id,'not_done & current & start_end & short')
     else:
         print(category)
-    buttoms = [InlineKeyboardButton(row['name'], callback_data='Task,'+row['name']+','+str(row['id'])) for idx,row in task_list.head(15).iterrows()]
+    buttoms = [InlineKeyboardButton(row['name'], callback_data='Task,'+row['name']+','+str(row['id'])) for idx,row in task_list.iterrows()]
     keyboard =  my_reshape(buttoms)
     keyboard += [[InlineKeyboardButton('Back', callback_data='Task_categories')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     return reply_markup
 
+########################## main commands ###########################################################
+def start(update: Update, context: CallbackContext) -> int:
+    print('start')
+    reply_keyboard = [['Show Tasks'],[ 'New Task', 'New Group Task'],]
+    update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+    )
+
+    return SELECTING_COMMAND
+def cancel(update: Update, context: CallbackContext) -> int:
+    print('cancel')
+    update.message.reply_text(
+        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END
+
+    
+'''both group and personal'''
+def adding_task(update: Update, context: CallbackContext,task_type='Personal') -> int:
+    text = update.message.text
+    if task_type=='Personal':
+        user_id = update['message']['chat']['id']
+    elif task_type=='Group':
+        user_id = 'G_1'          
+    try:
+        msg = bl.adding_task(text,user_id)
+        was_successful = True
+    except Exception as e:
+        log(e,'adding_task()')
+        msg = 'Sorry, right now we faced a difficulty.'
+    msg = msg_validate(msg)
+    update.message.reply_text(msg)
+    
+    if was_successful and task_type == 'Group':
+        user_ids = [91686406,96166505]#bl.get_user_ids_in_group('G_1')
+        user_id = update['message']['chat']['id']
+        bot = telepot.Bot(os.environ['tlg_token']) 
+        for uid in user_ids:
+            if uid != user_id:
+                bot.sendMessage(uid,'"'+text+'" has been added to the group tasks')
+    
+    return SELECTING_COMMAND
+def adding_group_task(update: Update, context: CallbackContext) -> int:
+    return adding_task(update, context,'Group')
+    
+
+''' keyboard to call function '''
 def cat_selecting(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     print('%',text)
     if text == 'Show Tasks':
         try:
             user_id = update['message']['chat']['id']
-            reply_markup = showing_tasks(user_id)
+            reply_markup = get_tasks_as_keyboards(user_id)
             update.message.reply_text('Please choose:', reply_markup=reply_markup)
         except Exception as e:
             log(e,'unchecked_tasks_msg() in List of Unchecked')
@@ -154,7 +160,12 @@ def changing_task(update: Update, _: CallbackContext) -> None:
     elif val[0] == 'Action':
         msg = change_status(val[1],val[2],update)
         if msg == 'Done':
-            query.edit_message_text(text=f'{val[3]} has been {val[1]}')
+            user_id = update['callback_query']['message']['chat']['id']
+            reply_markup = get_tasks_as_keyboards(user_id)
+            query.edit_message_text(text=f'<b>{val[3]} has been {val[1]}.</b>\n\nDo you want to change status of any other task?', 
+                                    reply_markup = reply_markup, 
+                                    parse_mode= ParseMode.HTML)
+            
         else:
             print('Error',val[1],val[2])
             raise
@@ -167,33 +178,21 @@ def changing_task(update: Update, _: CallbackContext) -> None:
          keyboard = [[InlineKeyboardButton('Current suggestion', callback_data=f'Category,Current suggestion')],
                     [InlineKeyboardButton('All current', callback_data=f'Category,All current'),
                      InlineKeyboardButton('All today', callback_data=f'Category,All today'),
-                     #InlineKeyboardButton('Done today', callback_data=f'Category,Done today')
                      ],
-                    #[InlineKeyboardButton('All repeating', callback_data=f'Category,All repeating'),
-                    # InlineKeyboardButton('All once', callback_data=f'Category,All once'),
-                    # InlineKeyboardButton('All once not done', callback_data=f'Category,All once not done')],
                     ]
          reply_markup = InlineKeyboardMarkup(keyboard)
          query.edit_message_text(text="Which category of task you would like to see",reply_markup=reply_markup)
 
     elif val[0] == 'Category':
         user_id = update['callback_query']['message']['chat']['id']
-        reply_markup = showing_tasks(user_id,val[1])
+        reply_markup = get_tasks_as_keyboards(user_id,val[1])
         query.edit_message_text(text="Please choose a task",reply_markup=reply_markup)
         
     else:
         print(val)
     
-    #update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),)
-
-
-
-
-
+########################## main function ##################################################################
 def main() -> None:
-    # Create the Updater and pass it your bot's token.
-    # Make sure to set use_context=True to use the new context based callbacks
-    # Post version 12 this will no longer be necessary
     updater = Updater(os.environ['tlg_token'], use_context=True)
     updater.dispatcher.add_handler(CallbackQueryHandler(changing_task))
     # Get the dispatcher to register handlers
@@ -201,7 +200,9 @@ def main() -> None:
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start),MessageHandler(Filters.regex('^(Show Tasks|New Task|New Group Task)$'), cat_selecting)],
+        entry_points=[CommandHandler('start', start),
+                      CommandHandler('menu', start),
+                      MessageHandler(Filters.regex('^(Show Tasks|New Task|New Group Task)$'), cat_selecting)],
         states={
             SELECTING_COMMAND: [MessageHandler(Filters.regex('^(Show Tasks|New Task|New Group Task)$'), cat_selecting)],
             NEW_TASK: [MessageHandler(Filters.text, adding_task)],
@@ -215,15 +216,17 @@ def main() -> None:
     # Start the Bot
     updater.start_polling()
 
+
+
+
+
+
+
     j= updater.job_queue
-    
-
-
-
-
+    # I can't put it outside since I should pass this function to another function and that another function just give update to it
     def talker(update):
         for user_id in bl.user_id_list():
-            reply_markup = showing_tasks(user_id)
+            reply_markup = get_tasks_as_keyboards(user_id)
             updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)    
         
         
@@ -241,7 +244,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
-
-
-#updater.bot.sendMessage(chat_id=91686406, text='Hello there!')
