@@ -333,7 +333,7 @@ def main() -> None:
             updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)    
         
         
-    j.run_repeating(talker,interval = 60*60  ,first= 0)
+    j.run_repeating(talker,interval = 60*60*2  ,first= 0)
     updater.start_polling()
 
 
