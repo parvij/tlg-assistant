@@ -36,6 +36,8 @@ def get_tasks_list(user_id,category='not_done & current & start_end & short'):
     print('starting unchecked_tasks')
     
     tasks_df = dl.reading_file('tasks.csv',user_id = user_id)
+    tasks_df = tasks_df[tasks_df.status=='active']
+    print(len(tasks_df))
 
     if 'current' in category:
         times_df = dl.reading_file('times.csv')
@@ -79,7 +81,6 @@ def get_tasks_list(user_id,category='not_done & current & start_end & short'):
                                    df4[df4.repeat=='Once']]
                                   ).reset_index(drop=True).sort_values(['Periority','cnt_done'])    
     
-    print(tasks_df)
     print('unchecked_tasks done.')
     return tasks_df[['id','name']]
 
@@ -111,17 +112,54 @@ def change_status(val,text,user_id):
     else:
         return 'It is not a number'
     
-def adding_task(text,user_id):
+def adding_task(text,group_id,owner_id):
     
     df = dl.reading_file('tasks.csv')
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
-    df = df.append({'id': df.id.max()+1,'name':text,'repeat':'Once', 'start_date':get_today(),'duration':'Free time','Periority':1,'group_id':user_id}, ignore_index=True)
+    new_id = df.id.max()+1
+    df = df[(df.status=='active') | (df.owner_id!= int(owner_id))]
+    df = df.append({'id':new_id ,
+                    'name':text,
+                    'repeat':'Once', 
+                    'start_date':get_today(),
+                    'duration':'Free time',
+                    'Periority':1,
+                    'group_id':group_id, 
+                    'status':'inactive',
+                    'owner_id':owner_id,
+                    }, ignore_index=True)
     dl.writing_file(df,'tasks.csv')
-    msg = 'Done'
     
-    return msg 
+    return new_id
+
+def updating_inactive_task(update_dict,owner_id):
+    df = dl.reading_file('tasks.csv')
+    #id	name	time_cost	time	repeat	start	weekend	Why	Periority
+    new_task = df[(df.status=='inactive') & (df.owner_id == int(owner_id))].iloc[0]
+    df = df[(df.status!='inactive') | (df.owner_id!=int(owner_id))]
+    for c in update_dict.keys():
+        new_task[c] = update_dict[c]
+    print(new_task)
+    df = df.append(new_task, ignore_index=True)
+    dl.writing_file(df,'tasks.csv')
+    return new_task.id
+    
+
 
 def all_task():
     return 'not available now'
 
 
+def get_task_info(task_id):
+    df = dl.reading_file('tasks.csv')
+    df = df[df.id == task_id]
+    df_group = dl.reading_file('user_group.csv')[['group_id','branch_name']].drop_duplicates()
+    
+    df = pd.merge(df,df_group,on = 'group_id')
+    return df.iloc[0]
+
+
+def get_groups(user_id):
+    df = dl.reading_file('user_group.csv')
+    df = df[df.user_id == user_id]
+    return df[['group_id','branch_name']]
