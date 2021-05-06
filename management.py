@@ -93,6 +93,8 @@ def get_user_id(update):
     elif update['message']:
         user_id = update['message']['chat']['id']
         return user_id
+    
+    print('ffffffffffffffffffffuck')
     raise
     
     
@@ -151,10 +153,12 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     if text == 'Show Tasks':
         try:
             user_id = get_user_id(update)
+            print('user_id=',user_id)
             reply_markup = get_tasks_as_keyboards(user_id)
             update.message.reply_text('Please choose:', reply_markup=reply_markup)
         except Exception as e:
-            print(reply_markup)
+            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$',user_id)
+            print('##########################',reply_markup)
             log(e,'unchecked_tasks_msg() in List of Unchecked')
             msg = 'Sorry, right now we faced a difficulty.'
             update.message.reply_text(msg)

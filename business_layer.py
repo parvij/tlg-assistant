@@ -106,7 +106,7 @@ def get_time():
 def change_status(val,text,user_id):
     if text.isnumeric():
         df = dl.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':get_today(),'type':val,'group_id':user_id}, ignore_index=True)
+        df = df.append({'task_id': int(text),'date':get_today(),'type':val,'owner_id':user_id}, ignore_index=True)
         dl.writing_file(df,'have_done.csv')
         return 'Done'
     else:

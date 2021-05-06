@@ -63,12 +63,12 @@ def reading_file(filename, env = None, user_id=None):
                 print(f'{c} was not a date type. sample:\n',df.iloc[0])
     
     
-    if user_id:
-        user_group_df = reading_file('user_group.csv')
-        user_group_df = user_group_df[user_group_df.user_id == user_id]
-        groups = user_group_df.group_id.to_list()
-        print(groups)
-        df = df[df.group_id.apply(str).isin(groups)]
+    # if user_id:
+    #     user_group_df = reading_file('user_group.csv')
+    #     user_group_df = user_group_df[user_group_df.user_id == user_id]
+    #     groups = user_group_df.group_id.to_list()
+    #     print(groups)
+    #     df = df[df.group_id.apply(str).isin(groups)]
         print(df)
     print('reading done.')
     return df
