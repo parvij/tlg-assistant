@@ -30,7 +30,7 @@ def msg_validate(msg):
 
 ''' a wrapper for change status of business_layer to prevent of failing and keep program running'''
 def change_status(val,text,update):
-    user_id = update['callback_query']['message']['chat']['id']
+    user_id = get_user_id(update)
     try:
         msg = bl.change_status(val,text,user_id)
     except Exception as e:
@@ -77,22 +77,23 @@ def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
 
 def get_additional_task_info_as_keyboards(task_id):
     task_info = bl.get_task_info(task_id)
+    
     reply_markup = [[InlineKeyboardButton('Title: '+str(task_info['name']), callback_data='Add,Title,')],
                                  [InlineKeyboardButton('#Repeating: '+str(task_info['repeat']), callback_data='Add,Repeating'),
                                   InlineKeyboardButton('Who: '+str(task_info['branch_name']), callback_data='Add,Who,')],
                                  [ InlineKeyboardButton('#Start Date: '+str(task_info['start_date']), callback_data='Add,Start Date,'), 
                                    InlineKeyboardButton('#Duration: '+str(task_info['duration']), callback_data='Add,Duration,')],
-                                 [InlineKeyboardButton('Add', callback_data='Add,Add,'),
+                                 [InlineKeyboardButton(task_info['action'], callback_data=task_info['action']+','+task_info['action']),
                                   InlineKeyboardButton('Cancel', callback_data='Add,Cancel,')]]
     return reply_markup
 
 def get_user_id(update):
     if update['callback_query']:
         user_id = update['callback_query']['message']['chat']['id']
-        return user_id
+        return str(user_id)
     elif update['message']:
         user_id = update['message']['chat']['id']
-        return user_id
+        return str(user_id)
     
     print('ffffffffffffffffffffuck')
     raise
@@ -122,7 +123,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 '''both group and personal'''
 def adding_task(update: Update, context: CallbackContext) -> int:
     text = update.message.text
-    owner_id = str(update['message']['chat']['id'])
+    owner_id = get_user_id(update)
     group_id = 'P_' + owner_id
     try:
         task_id = bl.adding_task(text,group_id,owner_id)
@@ -138,7 +139,7 @@ def adding_task(update: Update, context: CallbackContext) -> int:
     
     if was_successful and False:
         user_ids = [91686406,96166505]#bl.get_user_ids_in_group('G_1')
-        user_id = update['message']['chat']['id']
+        user_id = get_user_id(update)
         bot = telepot.Bot(os.environ['tlg_token']) 
         for uid in user_ids:
             if uid != user_id:
@@ -157,8 +158,6 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
             reply_markup = get_tasks_as_keyboards(user_id)
             update.message.reply_text('Please choose:', reply_markup=reply_markup)
         except Exception as e:
-            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$',user_id)
-            print('##########################',reply_markup)
             log(e,'unchecked_tasks_msg() in List of Unchecked')
             msg = 'Sorry, right now we faced a difficulty.'
             update.message.reply_text(msg)
@@ -178,7 +177,8 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
                     [InlineKeyboardButton('Postponed', callback_data=f'Action,Postpone,{val[2]},{val[1]}'),
                      InlineKeyboardButton('#Undo', callback_data=f'_Action,Undo,{val[2]},{val[1]}')],
                     [InlineKeyboardButton('Cancel', callback_data=f'Cancel,0,0,{val[1]}'),
-                     InlineKeyboardButton('#Delete', callback_data=f'Action,Delete,{val[2]},{val[1]}')],
+                     InlineKeyboardButton('#Delete', callback_data=f'Action,Delete,{val[2]},{val[1]}'),
+                     InlineKeyboardButton('Edit', callback_data=f'Action,Edit,{val[2]},{val[1]}')],
                     ]
             
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -186,17 +186,33 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
         
         
     elif val[0] == 'Action':
-        msg = change_status(val[1],val[2],update)
-        if msg == 'Done':
-            user_id = update['callback_query']['message']['chat']['id']
-            reply_markup = get_tasks_as_keyboards(user_id)
-            query.edit_message_text(text=f'<b>{val[3]} has been {val[1]}.</b>\n\nDo you want to change status of any other task?', 
-                                    reply_markup = reply_markup, 
-                                    parse_mode= ParseMode.HTML)
-            
+        if val[1] == 'Edit':
+            owner_id = get_user_id(update)
+            task_id = val[2]
+            try:
+                bl.editing_task(task_id,owner_id)
+                msg = 'Please Edit it:'
+            except Exception as e:
+                log(e,'adding_task()')
+                msg = 'Sorry, right now we faced a difficulty.'
+            msg = msg_validate(msg)
+            reply_keyboard_additional = get_additional_task_info_as_keyboards(task_id)    
+            reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
+            query.edit_message_text(msg, reply_markup=reply_markup)            
+            return CHANGING_TASK
         else:
-            print('Error',val[1],val[2])
-            raise
+            msg = change_status(val[1],val[2],update)
+            if msg == 'Done':
+                user_id = get_user_id(update)
+                reply_markup = get_tasks_as_keyboards(user_id)
+                query.edit_message_text(text=f'<b>{val[3]} has been {val[1]}.</b>\n\nDo you want to change status of any other task?', 
+                                        reply_markup = reply_markup, 
+                                        parse_mode= ParseMode.HTML)
+            
+                
+            else:
+                print('Error',val[1],val[2])
+                raise
             
             
     elif val[0] == 'Cancel':
@@ -215,22 +231,6 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
         user_id = update['callback_query']['message']['chat']['id']
         reply_markup = get_tasks_as_keyboards(user_id,val[1])
         query.edit_message_text(text="Please choose a task",reply_markup=reply_markup)
-        
-    # elif val[0] == 'Add':
-    #     if val[1] == 'Title':
-    #         pass
-    #     elif val[1] == 'Repeating':
-    #         pass
-    #     elif val[1] == 'Who':
-    #         pass
-    #     elif val[1] == 'Start Date':
-    #         pass
-    #     elif val[1] == 'Start Date':
-    #         pass
-    #     elif val[1] == 'Add':
-    #         query.edit_message_text(text="The task has been Added")
-    #     elif val[1] == 'Cancel':
-    #         query.edit_message_text(text="Adding task has been Canceled")
             
         
     else:
@@ -238,7 +238,7 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
 
 
 def changing_task(update: Update, _: CallbackContext) -> None:
-    user_id = get_user_id(update)
+    owner_id = str(get_user_id(update))
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
@@ -252,7 +252,7 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         elif val[1] == 'Repeating':
             pass
         elif val[1] == 'Who':
-            keyboard = get_who_keyboard(user_id)
+            keyboard = get_who_keyboard(owner_id)
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(text=f"Who is going to do this?",reply_markup=reply_markup)
             return CHANGING_TASK
@@ -261,7 +261,6 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         elif val[1] == 'Start Date':
             pass
         elif val[1] == 'Add':
-            owner_id = str(get_user_id(update))
             update_dict = {'status':'active'}
             task_id = bl.updating_inactive_task(update_dict,owner_id)
             query.edit_message_text(text="The task has been Added")
@@ -270,7 +269,6 @@ def changing_task(update: Update, _: CallbackContext) -> None:
             query.edit_message_text(text="Adding task has been Canceled")
             return SELECTING_COMMAND
     elif val[0] == 'Who':
-        owner_id = str(get_user_id(update))
         update_dict = {'group_id':val[1]}
         task_id = bl.updating_inactive_task(update_dict,owner_id)
         
@@ -278,6 +276,13 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
         query.edit_message_text(text=f"Is it ok now?",reply_markup=reply_markup)
         return CHANGING_TASK
+    elif val[0] == 'Edit':
+        
+        update_dict = {'status':'active'}
+        task_id = bl.updating_inactive_task(update_dict,owner_id)
+        query.edit_message_text(text="The task has been Added")        
+        return SELECTING_COMMAND
+        
     
 def changing_title(update: Update, context: CallbackContext) -> int:
     text = update.message.text
