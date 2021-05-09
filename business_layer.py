@@ -120,9 +120,7 @@ def get_today(owner_id=None,diff_time=None):
         else:
             logging.error(' __Business__  get_today __> Error: owner_id and diff_time are empty')
             raise
-    result = (datetime.datetime.now().astimezone(timezone('Etc/GMT0'))+ 
-              datetime.timedelta(hours=diff_time)+ 
-              datetime.timedelta(hours=-2)).date()
+    result = (datetime.datetime.now().astimezone(timezone('Etc/GMT0'))+ datetime.timedelta(hours=int(diff_time))+ datetime.timedelta(hours=-2)).date()
     #logging.info(' __Business__  get_today __> result:'+str(result))
     return result
 
