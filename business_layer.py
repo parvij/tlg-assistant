@@ -258,7 +258,7 @@ def add_user_if_not_exist(owner_id,name):
     logging.info(' __Business__  add_user_if_not_exist __> owner_id:'+str(owner_id)+'| name:'+str(name))
     df_user = dl.reading_file('users.csv')
     if int(owner_id) not in df_user.id.to_list():
-        new_user_row = {'id':owner_id,'name':name}
+        new_user_row = {'id':owner_id,'name':name,'local_time_diff':'-4'}
         df_user = df_user.append(new_user_row, ignore_index=True)
         dl.writing_file(df_user,'users.csv')
         
