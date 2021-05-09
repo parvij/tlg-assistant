@@ -154,6 +154,7 @@ def get_who_keyboard(user_id):
     return reply_markup
 ########################## main commands ###########################################################
 def start(update: Update, context: CallbackContext) -> int:
+    print('started')
     logging.info(' __Interface__  start __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     name_tlg = update['message']['chat']['username']+' / '+update['message']['chat']['first_name']
     owner_id = get_user_id(update)
