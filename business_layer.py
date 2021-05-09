@@ -133,7 +133,7 @@ def get_time(owner_id=None,diff_time=None):
             logging.error(' __Business__  get_time __> Error: owner_id and diff_time are empty')
             raise
     result = (datetime.datetime.now().astimezone(timezone('Etc/GMT0')) + 
-              datetime.timedelta(hours=diff_time)).time()
+              datetime.timedelta(hours=int(diff_time))).time()
     logging.info(' __Business__  get_time __> result:'+str(result))
     return result
 
