@@ -268,7 +268,12 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
             if msg == 'Done':
                 user_id = get_user_id(update)
                 reply_markup,_ = get_tasks_as_keyboards(user_id)
-                query.edit_message_text(text=f'<b>{val[3]} has been {val[1]}.</b>\n\nDo you want to change status of any other task?', 
+                msg = f'{val[3]} has been {val[1]}.'
+                if val[1] == 'Done':
+                    msg = '<b>' + msg + '</b>'
+                updater.bot.sendMessage(chat_id=user_id, text=msg,parse_mode= ParseMode.HTML)
+                query.edit_message_text(text=#f'<b>{val[3]} has been {val[1]}.</b>
+                                             'Do you want to change status of any other task?', 
                                         reply_markup = reply_markup, 
                                         parse_mode= ParseMode.HTML)
             
@@ -476,71 +481,79 @@ def changing_title(update: Update, context: CallbackContext) -> int:
     
     my_logging('info',' __Interface__  changing_title __> result: CHANGING_TASK')
     return CHANGING_TASK
+
+
+
+
+
+
+
+
 ########################## main function ##################################################################
-def main() -> None:
-    logging.basicConfig(format='%(asctime)s  %(levelname)s:  %(message)s',
-                        handlers=[logging.FileHandler('logfile.log', 'w', 'utf-8')],
-                        level=logging.INFO)
-    my_logging('info',' __Interface__  main __>\n\n\n')
+# def main() -> None:
+logging.basicConfig(format='%(asctime)s  %(levelname)s:  %(message)s',
+                    handlers=[logging.FileHandler('logfile.log', 'w', 'utf-8')],
+                    level=logging.INFO)
+my_logging('info',' __Interface__  main __>\n\n\n')
+
+updater = Updater(os.environ['tlg_token'], use_context=True)
+#updater.dispatcher.add_handler(CallbackQueryHandler(InlineKeyboardHandler))
+# Get the dispatcher to register handlers
+dispatcher = updater.dispatcher
+
+# Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
+conv_handler = ConversationHandler(
+    entry_points=[CommandHandler('start', start),
+                  CommandHandler('menu', start),
+                  MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting)],
+    states={
+        SELECTING_COMMAND: [MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting),
+                            CallbackQueryHandler(InlineKeyboardHandler)],
+        NEW_TASK: [MessageHandler(Filters.text, adding_task)],
+        CHANGING_TASK: [CallbackQueryHandler(changing_task)],
+        CHANGING_TASK_TITLE: [MessageHandler(Filters.text, changing_title)],
+        CHANGING_TASK_REPEATING_INTERVAL: [MessageHandler(Filters.text, changing_repeating_interval)],
+        CHANGING_SETTING : [CallbackQueryHandler(changing_setting)],
+        CHANGING_LOCAL_TIME: [MessageHandler(Filters.text, changing_local_time)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)],
+)
+
+dispatcher.add_handler(conv_handler)
+
+# Start the Bot
+updater.start_polling()
+
+
+
+
+
+
+
+j= updater.job_queue
+# I can't put it outside since I should pass this function to another function and that another function just give update to it
+def talker(update):
+    my_logging('info',' __Interface__  talker __> update:'+str(update))
+    for user_id in bl.user_id_list():
+        reply_markup, trigger = get_tasks_as_keyboards(user_id)
+        if trigger:
+            updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)    
     
-    updater = Updater(os.environ['tlg_token'], use_context=True)
-    #updater.dispatcher.add_handler(CallbackQueryHandler(InlineKeyboardHandler))
-    # Get the dispatcher to register handlers
-    dispatcher = updater.dispatcher
-
-    # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start),
-                      CommandHandler('menu', start),
-                      MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting)],
-        states={
-            SELECTING_COMMAND: [MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting),
-                                CallbackQueryHandler(InlineKeyboardHandler)],
-            NEW_TASK: [MessageHandler(Filters.text, adding_task)],
-            CHANGING_TASK: [CallbackQueryHandler(changing_task)],
-            CHANGING_TASK_TITLE: [MessageHandler(Filters.text, changing_title)],
-            CHANGING_TASK_REPEATING_INTERVAL: [MessageHandler(Filters.text, changing_repeating_interval)],
-            CHANGING_SETTING : [CallbackQueryHandler(changing_setting)],
-            CHANGING_LOCAL_TIME: [MessageHandler(Filters.text, changing_local_time)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
-
-    dispatcher.add_handler(conv_handler)
-
-    # Start the Bot
-    updater.start_polling()
-
-
-
-
-
-
-
-    j= updater.job_queue
-    # I can't put it outside since I should pass this function to another function and that another function just give update to it
-    def talker(update):
-        my_logging('info',' __Interface__  talker __> update:'+str(update))
-        for user_id in bl.user_id_list():
-            reply_markup, trigger = get_tasks_as_keyboards(user_id)
-            if trigger:
-                updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)    
-        
-        
-    j.run_repeating(talker,interval = int(os.environ['sleep_time'])  ,first= 0)
-    updater.start_polling()
-
-
-
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
     
+j.run_repeating(talker,interval = int(os.environ['sleep_time'])  ,first= 0)
+updater.start_polling()
 
-if __name__ == '__main__':
-    main()
+
+
+
+# Run the bot until you press Ctrl-C or the process receives SIGINT,
+# SIGTERM or SIGABRT. This should be used most of the time, since
+# start_polling() is non-blocking and will stop the bot gracefully.
+updater.idle()
+
+
+# if __name__ == '__main__':
+#     main()
     
     
     
