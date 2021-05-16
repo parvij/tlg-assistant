@@ -65,7 +65,7 @@ def my_reshape(the_list):
 def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
     logging.info(' __Interface__  get_tasks_as_keyboards __> user_id:'+str(user_id)+'| category:'+str(category))
     if category == 'Current suggestion':    # 'short':1,'Today':1,'current':1, done:0
-        task_list = bl.get_tasks_list(user_id,'not_done & current & start_end & short')
+        task_list = bl.get_tasks_list(user_id,'not_done & current & start_end')
     elif category == 'All current':         # 'short':0,'Today':1,'current':1, done:0
         task_list = bl.get_tasks_list(user_id,'not_done & current & start_end')
     elif category == 'All today':           # 'short':0,'Today':1,'current':0, done:0
