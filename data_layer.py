@@ -16,8 +16,18 @@ import pandas as pd
 import dateutil.parser
 import logging
 
+
+def my_logging(log_type, msg):
+    print(log_type,msg)
+    if log_type == 'info':
+        logging.info(msg)
+    elif log_type == 'error':
+        logging.error(msg)
+
+
+
 def writing_file(df,filename, env = None):
-    logging.info(' __Data__  writing_file __> df:'+str(df)+'| filename:'+str(filename)+'| env:'+str(env))
+    my_logging('info',' __Data__  writing_file __> df:'+str(df)+'| filename:'+str(filename)+'| env:'+str(env))
     
     if not env:
         env = os.environ['env']
@@ -33,10 +43,10 @@ def writing_file(df,filename, env = None):
     else:
         print(f'problem with reading ENV. The ENV is {env}')
         raise
-    logging.info(' __Data__  writing_file __> result:'+str('Done'))
+    my_logging('info',' __Data__  writing_file __> result:'+str('Done'))
 
 def reading_file(filename, env = None, user_id=None):
-    logging.info(' __Data__  reading_file __> filename:'+str(filename)+'| env:'+str(env)+'| user_id:'+str(user_id))
+    my_logging('info',' __Data__  reading_file __> filename:'+str(filename)+'| env:'+str(env)+'| user_id:'+str(user_id))
     if not env:
         env = os.environ['env']
         
@@ -69,5 +79,5 @@ def reading_file(filename, env = None, user_id=None):
         user_group_df = user_group_df[user_group_df.user_id == int(user_id)]
         groups = user_group_df.group_id.to_list()
         df = df[df.group_id.apply(str).isin(groups)]
-    logging.info(' __Data__  reading_file __> result:'+str('Done'))
+    my_logging('info',' __Data__  reading_file __> result:'+str('Done'))
     return df
