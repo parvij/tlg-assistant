@@ -154,15 +154,18 @@ def start(update: Update, context: CallbackContext) -> int:
     my_logging('info',' __Interface__  start __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     name_tlg = update['message']['chat']['username']+' / '+update['message']['chat']['first_name']
     owner_id = get_user_id(update)
-    print(1)
     bl.add_user_if_not_exist(owner_id,name_tlg)
-    print(2)
-    reply_keyboard = [['Show Tasks', 'New Task'],['Setting']]
-    update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
-    )
-    #print(type(update), update)
+    menu(update, context)
     my_logging('info',' __Interface__  start __> result: SELECTING_COMMAND')
     return SELECTING_COMMAND
+
+def menu(update: Update, context: CallbackContext) -> int:
+    my_logging('info',' __Interface__  menu __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
+    reply_keyboard = [['Show Tasks', 'New Task'],['Setting']]
+    update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),)
+    my_logging('info',' __Interface__  menu __> result: SELECTING_COMMAND')
+    return SELECTING_COMMAND
+
 def cancel(update: Update, context: CallbackContext) -> int:
     my_logging('info',' __Interface__  cancel __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     update.message.reply_text(
@@ -226,6 +229,12 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
         reply_markup = get_settings_as_keyboards(user_id)
         update.message.reply_text('Please choose:', reply_markup=reply_markup)
         return CHANGING_SETTING
+            
+    else:
+        update.message.reply_text(text=f"I confuesed, please try again.")
+        my_logging('info',' __Interface__  cat_selecting __> result: SELECTING_COMMAND  ### Wrong command ###  text:'+str(text))
+        return SELECTING_COMMAND
+    
     
 def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
     my_logging('info',' __Interface__  InlineKeyboardHandler __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
@@ -308,7 +317,9 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
             
         
     else:
-        my_logging('error',' __Interface__  InlineKeyboardHandler __> val:'+str(val))
+        query.edit_message_text(text=f"I confuesed, please try again.")
+        my_logging('info',' __Interface__  InlineKeyboardHandler __> result: SELECTING_COMMAND  ### Wrong command ###  val:'+str(val))
+        return SELECTING_COMMAND
     
     
 def changing_setting(update: Update, _: CallbackContext) -> None:
@@ -327,6 +338,11 @@ def changing_setting(update: Update, _: CallbackContext) -> None:
     elif val[0] == 'Setting':
         query.edit_message_text(text="What is the new local time difference?")
         return CHANGING_LOCAL_TIME
+    else:
+        query.edit_message_text(text=f"I confuesed, please try again.")
+        my_logging('info',' __Interface__  changing_setting __> result: SELECTING_COMMAND ### Wrong command ### val:'+str(val))
+        return SELECTING_COMMAND
+    
 
 
 def changing_task(update: Update, _: CallbackContext) -> None:
@@ -413,6 +429,12 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         query.edit_message_text(text="The task has been Added")        
         my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND')
         return SELECTING_COMMAND
+    
+    else:
+        query.edit_message_text(text=f"I confuesed, please try again.")
+        my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND ### Wrong command ### val:'+str(val))
+        return SELECTING_COMMAND
+    
 
 def changing_repeating_interval(update: Update, context: CallbackContext) -> int:
     my_logging('info',' __Interface__  changing_repeating_interval __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
@@ -504,17 +526,24 @@ dispatcher = updater.dispatcher
 # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start),
-                  CommandHandler('menu', start),
+                  CommandHandler('menu', menu),
                   MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting)],
     states={
         SELECTING_COMMAND: [MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting),
-                            CallbackQueryHandler(InlineKeyboardHandler)],
-        NEW_TASK: [MessageHandler(Filters.text, adding_task)],
-        CHANGING_TASK: [CallbackQueryHandler(changing_task)],
-        CHANGING_TASK_TITLE: [MessageHandler(Filters.text, changing_title)],
-        CHANGING_TASK_REPEATING_INTERVAL: [MessageHandler(Filters.text, changing_repeating_interval)],
-        CHANGING_SETTING : [CallbackQueryHandler(changing_setting)],
-        CHANGING_LOCAL_TIME: [MessageHandler(Filters.text, changing_local_time)],
+                            CallbackQueryHandler(InlineKeyboardHandler),
+                            CommandHandler('menu', menu)],
+        NEW_TASK: [MessageHandler(Filters.text, adding_task),
+                   CommandHandler('menu', menu)],
+        CHANGING_TASK: [CallbackQueryHandler(changing_task),
+                        CommandHandler('menu', menu)],
+        CHANGING_TASK_TITLE: [MessageHandler(Filters.text, changing_title),
+                              CommandHandler('menu', menu)],
+        CHANGING_TASK_REPEATING_INTERVAL: [MessageHandler(Filters.text, changing_repeating_interval),
+                                           CommandHandler('menu', menu)],
+        CHANGING_SETTING : [CallbackQueryHandler(changing_setting),
+                            CommandHandler('menu', menu)],
+        CHANGING_LOCAL_TIME: [MessageHandler(Filters.text, changing_local_time),
+                              CommandHandler('menu', menu)],
     },
     fallbacks=[CommandHandler('cancel', cancel)],
 )
