@@ -74,7 +74,7 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
 
     if 'not_done' in category and len(tasks_df)>0:
         have_done_df = dl.reading_file('have_done.csv')
-        have_done_df = have_done_df.loc[(have_done_df.type != 'Postponed') | (have_done_df.date == today_val)]
+        have_done_df = have_done_df.loc[(have_done_df.type == 'Done') | (have_done_df.date == today_val)]
         last_have_done_df = have_done_df.groupby(['task_id']).date.max().reset_index()
         last_have_done_df.columns = ['id','done_date']
         
