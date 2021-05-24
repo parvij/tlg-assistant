@@ -280,8 +280,8 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
                 msg = f'{val[3]} has been {val[1]}.'
                 if val[1] == 'Done':
                     msg = '<b>' + msg + '</b>'
-                updater.bot.sendMessage(chat_id=user_id, text=msg,parse_mode= ParseMode.HTML)
-                query.edit_message_text(text=#f'<b>{val[3]} has been {val[1]}.</b>
+                query.edit_message_text( text=msg,parse_mode= ParseMode.HTML)
+                updater.bot.sendMessage(chat_id=user_id, text=#f'<b>{val[3]} has been {val[1]}.</b>
                                              'Do you want to change status of any other task?', 
                                         reply_markup = reply_markup, 
                                         parse_mode= ParseMode.HTML)
