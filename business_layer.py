@@ -65,7 +65,7 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
         tasks_times_df['start time'] = tasks_times_df['start time'].fillna(0).apply(int)
         tasks_times_df['end time'] = tasks_times_df['end time'].fillna(24).apply(int)
         tasks_for_now = tasks_times_df.loc[(hour_val.hour >= tasks_times_df['start time']) & 
-                                           (hour_val.hour <= tasks_times_df['end time']) & 
+                                           (hour_val.hour < tasks_times_df['end time']) & 
                                            (tasks_times_df['days'].apply(lambda x: str(today_val.weekday()) in str(x)))]
         has_new = len(tasks_for_now.loc[hour_val.hour== tasks_times_df['start time']]) > 0
         tasks_df = tasks_for_now.drop(['id_y','title','start time','end time', 'days'],axis=1).drop_duplicates()
