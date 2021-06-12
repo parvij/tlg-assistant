@@ -15,6 +15,7 @@ from io import StringIO  # python3 (or BytesIO for python2)
 import pandas as pd
 import dateutil.parser
 import logging
+import numpy as np
 
 
 def my_logging(log_type, msg):
@@ -69,7 +70,8 @@ def reading_file(filename, env = None, user_id=None):
     for c in df.columns:
         if 'date' in c:
             try:
-                df[c] = df[c].apply(lambda x:dateutil.parser.parse(x).date())
+                #df[c] = df[c].apply(lambda x: dateutil.parser.parse(x).date() )
+                df[c] = df[c].apply(lambda x: pd.to_datetime(x).date())
             except:
                 print(f'{c} was not a date type. sample:\n',df.iloc[0])
     

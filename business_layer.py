@@ -12,7 +12,7 @@ from datetime import timedelta
 import data_layer as dl
 import pandas as pd
 import logging
-
+import numpy as np
 ################################################################
 def my_logging(log_type, msg):
     print(log_type,msg)
@@ -71,6 +71,7 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
         tasks_df = tasks_for_now.drop(['id_y','title','start time','end time', 'days'],axis=1).drop_duplicates()
     if 'start_end' in category:
         tasks_df = tasks_df.loc[tasks_df.start_date.apply(lambda x: x <= today_val)]
+        tasks_df = tasks_df.loc[tasks_df.end_date.apply(lambda x: x!=x or x > today_val)]
 
     if 'not_done' in category and len(tasks_df)>0:
         have_done_df = dl.reading_file('have_done.csv')
