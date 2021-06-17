@@ -78,7 +78,7 @@ def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
     else:
         my_logging('error','Category is out of expectation ')
     if len(task_list) > 0 :
-        buttoms = [InlineKeyboardButton(row['name'], callback_data='Task,'+row['name']+','+str(row['id'])) for idx,row in task_list.iterrows()]
+        buttoms = [InlineKeyboardButton((str(round(row['time_cost']))+'.' if row['time_cost']==row['time_cost'] else '') +row['name'], callback_data='Task,'+row['name']+','+str(row['id'])) for idx,row in task_list.iterrows()]
         keyboard =  my_reshape(buttoms)
         keyboard += [[InlineKeyboardButton('Back', callback_data='Task_categories')]]
     else:

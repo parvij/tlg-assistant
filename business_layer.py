@@ -101,7 +101,7 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
         tasks_df = pd.concat([df4[df4.repeat!='Once'].sort_values(['Periority','cnt_done']).head(5),
                                    df4[df4.repeat=='Once']]
                                   ).reset_index(drop=True).sort_values(['Periority','cnt_done'])    
-    result = tasks_df[['id','name']]
+    result = tasks_df[['id','name','time_cost']]
     my_logging('info',' __Business__  get_tasks_list __> result:'+str(result))
     return result, has_new
 
