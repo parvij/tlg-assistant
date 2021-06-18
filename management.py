@@ -13,6 +13,7 @@ import business_layer as bl
 import numpy as np
 import telepot
 import logging
+import datetime as dt
 
 
 SELECTING_COMMAND, NEW_TASK, CHANGING_TASK, CHANGING_TASK_TITLE, CHANGING_TASK_INFO, CHANGING_TASK_REPEATING_INTERVAL, CHANGING_SETTING, CHANGING_LOCAL_TIME = range(8)
@@ -26,7 +27,11 @@ def my_logging(log_type, msg):
     elif log_type == 'error':
         logging.error(msg)
     
-    
+def time_plus_now(user_id,x):
+    t = bl.get_time(owner_id=user_id)
+    delta = dt.timedelta(minutes = x)
+    tm = (dt.datetime.combine(dt.date(1,1,1),t) + delta).time()
+    return  str(tm.hour)+':'+str(tm.minute)
     
 ''' if empty send back 'no result'''
 def msg_validate(msg):
@@ -80,7 +85,7 @@ def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
     if len(task_list) > 0 :
         buttoms = [InlineKeyboardButton((str(round(row['time_cost']))+'.' if row['time_cost']==row['time_cost'] else '') +row['name'], callback_data='Task,'+row['name']+','+str(row['id'])) for idx,row in task_list.iterrows()]
         keyboard =  my_reshape(buttoms)
-        keyboard += [[InlineKeyboardButton('Back', callback_data='Task_categories')]]
+        keyboard += [[InlineKeyboardButton('Back - '+str(time_plus_now(user_id,task_list.time_cost.apply(lambda x: (x+5+min(x,60)/6) if x==x else 0).sum())), callback_data='Task_categories')]]
     else:
         keyboard = [[InlineKeyboardButton('There is not any task to do, you can add new tasks. Back', callback_data='Task_categories')]]
     reply_markup = InlineKeyboardMarkup(keyboard)

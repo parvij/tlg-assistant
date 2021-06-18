@@ -148,6 +148,7 @@ def get_time(owner_id=None,diff_time=None):
 
 
 def change_status(val,text,owner_id):
+    my_logging('info',' __Business__  change_status __> val'+str(val)+' text:'+str(text)+' owner_id:'+str(owner_id))
     if text.isnumeric():
         df = dl.reading_file('have_done.csv')
         df = df.append({'task_id': int(text),'date':get_today(owner_id = owner_id),'type':val,'owner_id':owner_id}, ignore_index=True)
