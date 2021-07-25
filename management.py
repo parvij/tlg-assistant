@@ -567,11 +567,12 @@ updater.start_polling()
 j= updater.job_queue
 # I can't put it outside since I should pass this function to another function and that another function just give update to it
 def talker(update):
+    
     my_logging('info',' __Interface__  talker __> update:'+str(update))
     for user_id in bl.user_id_list():
         reply_markup, trigger = get_tasks_as_keyboards(user_id)
-        if trigger:
-            updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)    
+        if trigger and bl.get_last_time_a_task_has_done(user_id)+(int(os.environ['sleep_time']))<bl.time_to_num(bl.get_time(user_id)):
+            updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
     
     
 j.run_repeating(talker,interval = int(os.environ['sleep_time'])  ,first= 0)

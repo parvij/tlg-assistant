@@ -151,7 +151,7 @@ def change_status(val,text,owner_id):
     my_logging('info',' __Business__  change_status __> val'+str(val)+' text:'+str(text)+' owner_id:'+str(owner_id))
     if text.isnumeric():
         df = dl.reading_file('have_done.csv')
-        df = df.append({'task_id': int(text),'date':get_today(owner_id = owner_id),'type':val,'owner_id':owner_id}, ignore_index=True)
+        df = df.append({'task_id': int(text),'date':get_today(owner_id = owner_id),'type':val,'owner_id':owner_id,'time':time_to_num(get_time(owner_id=owner_id))}, ignore_index=True)
         dl.writing_file(df,'have_done.csv')
         result = 'Done'
     else:
@@ -296,3 +296,20 @@ def get_settings_dict(user_id):
     setting_dict = df_user.loc[df_user.id == int(user_id)].drop(['id', 'name'], axis=1).iloc[0]
     my_logging('info',' __Business__  add_user_if_not_exist __> result: '+str(setting_dict))
     return setting_dict
+
+def get_last_time_a_task_has_done(user_id):
+    my_logging('info',' __Business__  get_last_time_a_task_has_done __> owner_id:'+str(user_id))
+    have_done_df = dl.reading_file('have_done.csv')
+    today_val = get_today(owner_id = user_id)
+    have_done_df = have_done_df.loc[(have_done_df.type == 'Done') & (have_done_df.date == today_val)]
+    last_time = have_done_df.time.max()
+
+    my_logging('info',' __Business__  get_last_time_a_task_has_done __> last_time: '+str(last_time))
+    return last_time
+
+
+def time_to_num(t):
+    my_logging('info',' __Business__  time_to_num __> owner_id:'+str(t))
+    seconds = (t.hour * 60 + t.minute) * 60 + t.second
+    my_logging('info',' __Business__  time_to_num __> last_time: '+str(seconds))
+    return seconds
