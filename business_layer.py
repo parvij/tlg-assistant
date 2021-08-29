@@ -11,18 +11,13 @@ import datetime
 from datetime import timedelta
 import data_layer as dl
 import pandas as pd
-import logging
 import numpy as np
+from utils import my_logger
+from utils import my_logging
 ################################################################
-def my_logging(log_type, msg):
-    print(log_type,msg)
-    if log_type == 'info':
-        logging.info(msg)
-    elif log_type == 'error':
-        logging.error(msg)
         
         
-        
+#@my_logger        
 def done_period(row):
     val = row['repeat']
     #my_logging('info',' __Business__  done_period __> val:'+str(val))
@@ -50,8 +45,8 @@ def done_period(row):
 
 
 #   get_tasks_list(owner_id = 91686406,category='not_done & current & start_end & short')
+@my_logger
 def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
-    my_logging('info',' __Business__  get_tasks_list __> owner_id:'+str(owner_id)+'| category:'+str(category))
     category = category.split(' & ')
     tasks_df = dl.reading_file('tasks.csv',user_id = owner_id)
     tasks_df = tasks_df[tasks_df.status=='active']
@@ -102,7 +97,6 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
                                    df4[df4.repeat=='Once']]
                                   ).reset_index(drop=True).sort_values(['Periority','cnt_done'])    
     result = tasks_df[['id','name','time_cost']]
-    my_logging('info',' __Business__  get_tasks_list __> result:'+str(result))
     return result, has_new
 
 # def reading_busy_time():
@@ -114,13 +108,14 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
 #     my_logging('info',' __Business__  reading_busy_time __> result:'+str(df))
 #     return df
 
+@my_logger
 def user_id_list():
     df = dl.reading_file('users.csv')
     
     result = df.id.to_list()
-    my_logging('info',' __Business__  user_id_list __> result:'+str(result))
     return result
 
+#@my_logger
 def get_today(owner_id=None,diff_time=None):
     if not diff_time:
         if owner_id:
@@ -133,6 +128,7 @@ def get_today(owner_id=None,diff_time=None):
     #my_logging('info',' __Business__  get_today __> result:'+str(result))
     return result
 
+@my_logger
 def get_time(owner_id=None,diff_time=None):
     if not diff_time:
         if owner_id:
@@ -143,12 +139,11 @@ def get_time(owner_id=None,diff_time=None):
             raise
     result = (datetime.datetime.now().astimezone(timezone('Etc/GMT0')) + 
               datetime.timedelta(hours=int(diff_time))).time()
-    my_logging('info',' __Business__  get_time __> result:'+str(result))
     return result
 
 
+@my_logger
 def change_status(val,text,owner_id):
-    my_logging('info',' __Business__  change_status __> val'+str(val)+' text:'+str(text)+' owner_id:'+str(owner_id))
     if text.isnumeric():
         df = dl.reading_file('have_done.csv')
         df = df.append({'task_id': int(text),'date':get_today(owner_id = owner_id),'type':val,'owner_id':owner_id,'time':time_to_num(get_time(owner_id=owner_id))}, ignore_index=True)
@@ -157,11 +152,10 @@ def change_status(val,text,owner_id):
     else:
         result = 'input is not a number'
         
-    my_logging('info',' __Business__  change_status __> result:'+str(result))
     return result
     
+@my_logger
 def adding_task(text,group_id,owner_id):
-    my_logging('info',' __Business__  adding_task __> text:'+str(text)+'| group_id:'+str(group_id)+'| owner_id:'+str(owner_id))
     
     df = dl.reading_file('tasks.csv')
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
@@ -178,34 +172,31 @@ def adding_task(text,group_id,owner_id):
                     'owner_id':owner_id,
                     }, ignore_index=True)
     dl.writing_file(df,'tasks.csv')
-    my_logging('info',' __Business__  adding_task __> result:'+str(new_id))
     return new_id
 
 
+@my_logger
 def editing_task(task_id,owner_id):
-    my_logging('info',' __Business__  editing_task __> task_id:'+str(task_id)+'| owner_id:'+str(owner_id))
     df = dl.reading_file('tasks.csv')
     df = df[(df.status=='active') | (df.owner_id!= int(owner_id))]
     row = df[df.id == int(task_id)]
     row['status'] = 'inactive'
     df = df.append(row, ignore_index=True)
     dl.writing_file(df,'tasks.csv')
-    my_logging('info',' __Business__  editing_task __> result: this row has been added:'+str(row))
 
+@my_logger
 def updating_setting(update_dict,owner_id):        
-    my_logging('info',' __Business__  updating_setting __> update_dict:'+str(update_dict)+'| owner_id:'+str(owner_id))
     df = dl.reading_file('users.csv')
 
     for key in update_dict.keys():
         df.loc[df['id'] == int(owner_id), key] = update_dict[key]
     
     dl.writing_file(df,'users.csv')
-    my_logging('info',' __Business__  updating_setting __> result:'+str(df.loc[df['id'] == int(owner_id)]))
 
 
 
+@my_logger
 def updating_inactive_task(update_dict,owner_id):        
-    my_logging('info',' __Business__  updating_inactive_task __> update_dict:'+str(update_dict)+'| owner_id:'+str(owner_id))
     df = dl.reading_file('tasks.csv')
     #id	name	time_cost	time	repeat	start	weekend	Why	Periority
     new_task = df[(df.status=='inactive') & (df.owner_id == int(owner_id))].iloc[0]
@@ -219,18 +210,17 @@ def updating_inactive_task(update_dict,owner_id):
         new_task[c] = update_dict[c]
     df = df.append(new_task, ignore_index=True)
     dl.writing_file(df,'tasks.csv')
-    my_logging('info',' __Business__  updating_inactive_task __> result:'+str(new_task.id))
     return new_task.id
     
 
+@my_logger
 def all_task():
     result = 'not available now'
-    my_logging('info',' __Business__  all_task __> result:'+str(result))
     return result
 
 
+@my_logger
 def get_task_info(task_id):
-    my_logging('info',' __Business__  get_task_info __> task_id:'+str(task_id))
     df = dl.reading_file('tasks.csv')
     df = df[df.id == int(task_id)]
     len_df = len(df)
@@ -241,29 +231,26 @@ def get_task_info(task_id):
     df = pd.merge(df,df_group,on = 'group_id')
     
     result = df.iloc[0]
-    my_logging('info',' __Business__  get_task_info __> result:'+str(result))
     return result
 
 
+@my_logger
 def get_groups(user_id):
-    my_logging('info',' __Business__  get_groups __> user_id:'+str(user_id))
     df = dl.reading_file('user_group.csv')
     df = df[df.user_id == int(user_id)]
     
     result = df[['group_id','branch_name']]
-    my_logging('info',' __Business__  get_groups __> result:'+str(result))
     return result
 
+@my_logger
 def get_durations(user_id):
-    my_logging('info',' __Business__  get_durations __> user_id:'+str(user_id))
     df = dl.reading_file('times.csv')
     df = df[df.owner_id == int(user_id)]
     result = df
-    my_logging('info',' __Business__  get_durations __> result:'+str(result))
     return result
 
+@my_logger
 def add_user_if_not_exist(owner_id,name):
-    my_logging('info',' __Business__  add_user_if_not_exist __> owner_id:'+str(owner_id)+'| name:'+str(name))
     df_user = dl.reading_file('users.csv')
     if int(owner_id) not in df_user.id.to_list():
         new_user_row = {'id':owner_id,'name':name,'local_time_diff':'-4'}
@@ -287,29 +274,27 @@ def add_user_if_not_exist(owner_id,name):
         
         my_logging('info',' __Business__  add_user_if_not_exist __> result: this rows has been added:'+str(new_row)+'|\n and this row: '+str(new_user_row))
         
-    my_logging('info',' __Business__  add_user_if_not_exist __> result: user was not new')
     
     
+@my_logger
 def get_settings_dict(user_id):
-    my_logging('info',' __Business__  add_user_if_not_exist __> owner_id:'+str(user_id))
     df_user = dl.reading_file('users.csv')
     setting_dict = df_user.loc[df_user.id == int(user_id)].drop(['id', 'name'], axis=1).iloc[0]
-    my_logging('info',' __Business__  add_user_if_not_exist __> result: '+str(setting_dict))
     return setting_dict
 
+@my_logger
 def get_last_time_a_task_has_done(user_id):
-    my_logging('info',' __Business__  get_last_time_a_task_has_done __> owner_id:'+str(user_id))
     have_done_df = dl.reading_file('have_done.csv')
     today_val = get_today(owner_id = user_id)
     have_done_df = have_done_df.loc[(have_done_df.type == 'Done') & (have_done_df.date == today_val)]
-    last_time = have_done_df.time.max()
-
-    my_logging('info',' __Business__  get_last_time_a_task_has_done __> last_time: '+str(last_time))
+    if len(have_done_df)>0:
+        last_time = have_done_df.time.max()
+    else:
+        last_time = 0
     return last_time
 
 
+@my_logger
 def time_to_num(t):
-    my_logging('info',' __Business__  time_to_num __> owner_id:'+str(t))
     seconds = (t.hour * 60 + t.minute) * 60 + t.second
-    my_logging('info',' __Business__  time_to_num __> last_time: '+str(seconds))
     return seconds

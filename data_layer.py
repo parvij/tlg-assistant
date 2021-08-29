@@ -14,21 +14,14 @@ import boto3
 from io import StringIO  # python3 (or BytesIO for python2)
 import pandas as pd
 import dateutil.parser
-import logging
 import numpy as np
 
 
-def my_logging(log_type, msg):
-    print(log_type,msg)
-    if log_type == 'info':
-        logging.info(msg)
-    elif log_type == 'error':
-        logging.error(msg)
+from utils import my_logger
+from utils import my_logging
 
-
-
+@my_logger
 def writing_file(df,filename, env = None):
-    my_logging('info',' __Data__  writing_file __> df:'+str(df)+'| filename:'+str(filename)+'| env:'+str(env))
     
     if not env:
         env = os.environ['env']
@@ -44,10 +37,9 @@ def writing_file(df,filename, env = None):
     else:
         print(f'problem with reading ENV. The ENV is {env}')
         raise
-    my_logging('info',' __Data__  writing_file __> result:'+str('Done'))
 
+@my_logger
 def reading_file(filename, env = None, user_id=None):
-    my_logging('info',' __Data__  reading_file __> filename:'+str(filename)+'| env:'+str(env)+'| user_id:'+str(user_id))
     if not env:
         env = os.environ['env']
         
@@ -81,5 +73,4 @@ def reading_file(filename, env = None, user_id=None):
         user_group_df = user_group_df[user_group_df.user_id == int(user_id)]
         groups = user_group_df.group_id.to_list()
         df = df[df.group_id.apply(str).isin(groups)]
-    my_logging('info',' __Data__  reading_file __> result:'+str('Done'))
     return df

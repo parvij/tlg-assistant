@@ -14,18 +14,14 @@ import numpy as np
 import telepot
 import logging
 import datetime as dt
+from utils import my_logger
+from utils import my_logging
 
 
 SELECTING_COMMAND, NEW_TASK, CHANGING_TASK, CHANGING_TASK_TITLE, CHANGING_TASK_INFO, CHANGING_TASK_REPEATING_INTERVAL, CHANGING_SETTING, CHANGING_LOCAL_TIME = range(8)
 
 ########################## extra function ##########################################################
 
-def my_logging(log_type, msg):
-    print(log_type,msg)
-    if log_type == 'info':
-        logging.info(msg)
-    elif log_type == 'error':
-        logging.error(msg)
     
 def time_plus_now(user_id,x):
     t = bl.get_time(owner_id=user_id)
@@ -33,34 +29,36 @@ def time_plus_now(user_id,x):
     tm = (dt.datetime.combine(dt.date(1,1,1),t) + delta).time()
     return  str(tm.hour)+':'+str(tm.minute)
     
-''' if empty send back 'no result'''
+@my_logger
 def msg_validate(msg):
-    my_logging('info',' __Interface__  msg_validate __> msg:'+str(msg))
+    ''' 
+    if empty send back 'no result
+    '''
     
     msg = str(msg)
     if msg=='':
         msg = 'No Result'
         
-    my_logging('info',' __Interface__  msg_validate __> result:'+str(msg))
     return msg
 
-''' a wrapper for change status of business_layer to prevent of failing and keep program running'''
+@my_logger
 def change_status(val,text,update):
-    my_logging('info',' __Interface__  change_status __> val:'+str(val)+'| text:'+str(text)+'| update:'+str(update))
-
+    ''' 
+    a wrapper for change status of business_layer to prevent of failing and keep program running
+    '''
     user_id = get_user_id(update)
     try:
         msg = bl.change_status(val,text,user_id)
     except Exception as e:
         my_logging('error',' __Interface__  change_status __> Error:'+str(e))
         msg = 'Sorry, right now we faced a difficulty.(46)'
-
-    my_logging('info',' __Interface__  change_status __> result:'+str(msg))
     return msg
 
-''' for creating keyboard (in show tasks)'''
+@my_logger
 def my_reshape(the_list):
-    my_logging('info',' __Interface__  my_reshape __> the_list:'+str(the_list))
+    ''' 
+    for creating keyboard (in show tasks)
+    '''
     from math import sqrt
     the_list = np.array(the_list)
     ln = len(the_list)
@@ -68,12 +66,11 @@ def my_reshape(the_list):
     width = width if width<=4 else 4
     group = lambda flat, size: [flat[i:i+size] for i in range(0,len(flat), size)]
     result = group(the_list,width)
-    my_logging('info',' __Interface__  my_reshape __> result:'+str(result))
     return result
 
 #get_tasks_as_keyboards(user_id=91686406,category = 'Current suggestion')
+@my_logger
 def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
-    my_logging('info',' __Interface__  get_tasks_as_keyboards __> user_id:'+str(user_id)+'| category:'+str(category))
     if category == 'Current suggestion':    # 'short':1,'Today':1,'current':1, done:0
         task_list,has_new = bl.get_tasks_list(user_id,'not_done & current & start_end')
     elif category == 'All current':         # 'short':0,'Today':1,'current':1, done:0
@@ -90,23 +87,27 @@ def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
         keyboard = [[InlineKeyboardButton('There is not any task to do, you can add new tasks. Back', callback_data='Task_categories')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    trigger = len(task_list)>0 and has_new
-    my_logging('info',' __Interface__  get_tasks_as_keyboards __> result:'+str(reply_markup))    
+    current_time_user = bl.time_to_num(bl.get_time(user_id))
+    time_of_last_task_which_has_done = bl.get_last_time_a_task_has_done(user_id)
+    sleep_time = int(os.environ['sleep_time'])
+    
+    trigger = len(task_list)>0 and ( has_new or time_of_last_task_which_has_done + sleep_time < current_time_user)
+    
+    
     return reply_markup, trigger
 
+@my_logger
 def get_settings_as_keyboards(user_id):
-    my_logging('info',' __Interface__  get_settings_as_keyboards __> user_id:'+str(user_id))
     setting_dict = bl.get_settings_dict(user_id)
     setting_list = [InlineKeyboardButton(key+': '+str(setting_dict[key]), callback_data='Setting,'+str(setting_dict[key])) for key in setting_dict.keys()]
     keyboard = my_reshape(setting_list)
     keyboard += [[InlineKeyboardButton('Back', callback_data='Back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    my_logging('info',' __Interface__  get_settings_as_keyboards __> result:'+str(reply_markup))    
     return reply_markup
 
 
+@my_logger
 def get_additional_task_info_as_keyboards(task_id):
-    my_logging('info',' __Interface__  get_additional_task_info_as_keyboards __> task_id:'+str(task_id))
     task_info = bl.get_task_info(task_id)
     
     
@@ -119,11 +120,10 @@ def get_additional_task_info_as_keyboards(task_id):
                                  [InlineKeyboardButton(final_keyboard, callback_data=task_info['action']+','+task_info['action']),
                                   InlineKeyboardButton('Cancel', callback_data='Add,Cancel,')]]
     
-    my_logging('info',' __Interface__  get_additional_task_info_as_keyboards __> result:'+str(reply_markup))    
     return reply_markup
 
+@my_logger
 def get_user_id(update):
-    my_logging('info',' __Interface__  get_user_id __> update:'+str(update))
     if update['callback_query']:
         user_id = update['callback_query']['message']['chat']['id']
         my_logging('info',' __Interface__  get_user_id __> result:'+str(user_id))
@@ -139,22 +139,21 @@ def get_user_id(update):
 
 
     
+@my_logger
 def get_duration_keyboard(user_id):
-    my_logging('info',' __Interface__  get_duration_keyboard __> user_id:'+str(user_id))
     df_durations = bl.get_durations(user_id)
     df_durations = df_durations [['title']].drop_duplicates()
     reply_markup = [[InlineKeyboardButton(row.title, callback_data='Duration,'+row.title)] for idx,row in df_durations.iterrows()]
-    my_logging('info',' __Interface__  get_duration_keyboard __> result:'+str(reply_markup))
     return reply_markup
 
 
+@my_logger
 def get_who_keyboard(user_id):
-    my_logging('info',' __Interface__  get_who_keyboard __> user_id:'+str(user_id))
     df_groups = bl.get_groups(user_id)
     reply_markup = [[InlineKeyboardButton(row.branch_name, callback_data='Who,'+row.group_id)] for idx,row in df_groups.iterrows()]
-    my_logging('info',' __Interface__  get_who_keyboard __> result:'+str(reply_markup))
     return reply_markup
 ########################## main commands ###########################################################
+@my_logger
 def start(update: Update, context: CallbackContext) -> int:
     my_logging('info',' __Interface__  start __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     name_tlg = update['message']['chat']['username']+' / '+update['message']['chat']['first_name']
@@ -164,26 +163,24 @@ def start(update: Update, context: CallbackContext) -> int:
     my_logging('info',' __Interface__  start __> result: SELECTING_COMMAND')
     return SELECTING_COMMAND
 
+@my_logger
 def menu(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  menu __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     reply_keyboard = [['Show Tasks', 'New Task'],['Setting']]
     update.message.reply_text('Select your command',reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),)
-    my_logging('info',' __Interface__  menu __> result: SELECTING_COMMAND')
     return SELECTING_COMMAND
 
+@my_logger
 def cancel(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  cancel __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     update.message.reply_text(
         'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
     )
 
-    my_logging('info',' __Interface__  cancel __> result: ConversationHandler.END')
     return ConversationHandler.END
 
     
 '''both group and personal'''
+@my_logger
 def adding_task(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  adding_task __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     text = update.message.text
     owner_id = get_user_id(update)
     group_id = 'P_' + owner_id
@@ -207,12 +204,11 @@ def adding_task(update: Update, context: CallbackContext) -> int:
             if uid != user_id:
                 bot.sendMessage(uid,'"'+text+'" has been added to the group tasks')
     
-    my_logging('info',' __Interface__  adding_task __> result: CHANGING_TASK')    
     return CHANGING_TASK
 
 ''' keyboard to call function '''
+@my_logger
 def cat_selecting(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  cat_selecting __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     text = update.message.text
     if text == 'Show Tasks':
         try:
@@ -223,11 +219,9 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
             my_logging('error',' __Interface__  cat_selecting __>' + str(e))
             msg = 'Sorry, right now we faced a difficulty.(207)'
             update.message.reply_text(msg)
-        my_logging('info',' __Interface__  cat_selecting __> result: SELECTING_COMMAND')
         return SELECTING_COMMAND
     elif text == 'New Task':
         update.message.reply_text('What is the task title?')
-        my_logging('info',' __Interface__  cat_selecting __> result: NEW_TASK')
         return NEW_TASK
     elif text == 'Setting':
         user_id = get_user_id(update)
@@ -237,12 +231,12 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
             
     else:
         update.message.reply_text(text=f"I confuesed, please try again.")
-        my_logging('info',' __Interface__  cat_selecting __> result: SELECTING_COMMAND  ### Wrong command ###  text:'+str(text))
         return SELECTING_COMMAND
     
     
+@my_logger
 def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
-    my_logging('info',' __Interface__  InlineKeyboardHandler __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
+    print('clicked'*50)
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
@@ -275,7 +269,6 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
             reply_keyboard_additional = get_additional_task_info_as_keyboards(task_id)    
             reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
             query.edit_message_text(msg, reply_markup=reply_markup)            
-            my_logging('info',' __Interface__  InlineKeyboardHandler __> result: CHANGING_TASK')
             return CHANGING_TASK
         else:
             msg = change_status(val[1],val[2],update)
@@ -323,12 +316,11 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
         
     else:
         query.edit_message_text(text=f"I confuesed, please try again.")
-        my_logging('info',' __Interface__  InlineKeyboardHandler __> result: SELECTING_COMMAND  ### Wrong command ###  val:'+str(val))
         return SELECTING_COMMAND
     
     
+@my_logger
 def changing_setting(update: Update, _: CallbackContext) -> None:
-    my_logging('info',' __Interface__  changing_setting __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     #owner_id = str(get_user_id(update))
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
@@ -338,20 +330,18 @@ def changing_setting(update: Update, _: CallbackContext) -> None:
     my_logging('info',' __Interface__  changing_setting __>>> val: '+str(val))
     if val[0] == 'Back':
         query.edit_message_text(text="Done.")
-        my_logging('info',' __Interface__  changing_setting __> result: SELECTING_COMMAND')
         return SELECTING_COMMAND
     elif val[0] == 'Setting':
         query.edit_message_text(text="What is the new local time difference?")
         return CHANGING_LOCAL_TIME
     else:
         query.edit_message_text(text=f"I confuesed, please try again.")
-        my_logging('info',' __Interface__  changing_setting __> result: SELECTING_COMMAND ### Wrong command ### val:'+str(val))
         return SELECTING_COMMAND
     
 
 
+@my_logger
 def changing_task(update: Update, _: CallbackContext) -> None:
-    my_logging('info',' __Interface__  changing_task __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     owner_id = str(get_user_id(update))
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
@@ -368,19 +358,16 @@ def changing_task(update: Update, _: CallbackContext) -> None:
                          InlineKeyboardButton('Daily', callback_data=f'Repeating,Daily'),],]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(text=f"How is it repeating?",reply_markup=reply_markup)
-            my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
             return CHANGING_TASK
         elif val[1] == 'Duration':
             keyboard = get_duration_keyboard(owner_id)
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(text=f"what is the duration?",reply_markup=reply_markup)
-            my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
             return CHANGING_TASK
         elif val[1] == 'Who':
             keyboard = get_who_keyboard(owner_id)
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(text=f"Who is going to do this?",reply_markup=reply_markup)
-            my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
             return CHANGING_TASK
         elif val[1] == 'Start Date':
             pass
@@ -390,11 +377,9 @@ def changing_task(update: Update, _: CallbackContext) -> None:
             update_dict = {'status':'active'}
             task_id = bl.updating_inactive_task(update_dict,owner_id)
             query.edit_message_text(text="The task has been Added")
-            my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND')
             return SELECTING_COMMAND
         elif val[1] == 'Cancel':
             query.edit_message_text(text="Adding task has been Canceled")
-            my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND')
             return SELECTING_COMMAND
     elif val[0] == 'Who':
         update_dict = {'group_id':val[1]}
@@ -403,7 +388,6 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         reply_keyboard_additional = get_additional_task_info_as_keyboards(task_id)    
         reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
         query.edit_message_text(text=f"Is it ok now?",reply_markup=reply_markup)
-        my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
         return CHANGING_TASK
     elif val[0] == 'Repeating':
         if val[1] == 'Once':
@@ -413,7 +397,6 @@ def changing_task(update: Update, _: CallbackContext) -> None:
             reply_keyboard_additional = get_additional_task_info_as_keyboards(task_id)    
             reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
             query.edit_message_text(text=f"Is it ok now?",reply_markup=reply_markup)
-            my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
             return CHANGING_TASK
         if val[1] == 'Daily':
             query.edit_message_text(text="Every how many day you want to do this task?")
@@ -425,24 +408,21 @@ def changing_task(update: Update, _: CallbackContext) -> None:
         reply_keyboard_additional = get_additional_task_info_as_keyboards(task_id)    
         reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
         query.edit_message_text(text=f"Is it ok now?",reply_markup=reply_markup)
-        my_logging('info',' __Interface__  changing_task __> result: CHANGING_TASK')
         return CHANGING_TASK
     elif val[0] == 'Edit':
         
         update_dict = {'status':'active'}
         task_id = bl.updating_inactive_task(update_dict,owner_id)
         query.edit_message_text(text="The task has been Added")        
-        my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND')
         return SELECTING_COMMAND
     
     else:
         query.edit_message_text(text=f"I confuesed, please try again.")
-        my_logging('info',' __Interface__  changing_task __> result: SELECTING_COMMAND ### Wrong command ### val:'+str(val))
         return SELECTING_COMMAND
     
 
+@my_logger
 def changing_repeating_interval(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  changing_repeating_interval __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     text = update.message.text
     owner_id = str(get_user_id(update))
     if text.isnumeric():
@@ -461,15 +441,14 @@ def changing_repeating_interval(update: Update, context: CallbackContext) -> int
         reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
         update.message.reply_text(msg, reply_markup=reply_markup)
         
-        my_logging('info',' __Interface__  changing_repeating_interval __> result: CHANGING_TASK')
         return CHANGING_TASK
     else:
         update.message.reply_text('I expect a number, please give me a number or 0 for "without repeating"')
         my_logging('info',' __Interface__  changing_repeating_interval __> result: Noting. Stay at this status')
         
     
+@my_logger
 def changing_local_time  (update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  changing_local_time __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     text = update.message.text
     owner_id = str(get_user_id(update))
     try:
@@ -487,11 +466,10 @@ def changing_local_time  (update: Update, context: CallbackContext) -> int:
     reply_markup = get_settings_as_keyboards(owner_id)
     update.message.reply_text(msg, reply_markup=reply_markup)
 
-    my_logging('info',' __Interface__  changing_local_time __> result: CHANGING_TASK')
     return CHANGING_SETTING
     
+@my_logger
 def changing_title(update: Update, context: CallbackContext) -> int:
-    my_logging('info',' __Interface__  changing_title __> update:'+str(update)+'| CallbackContext:'+str(CallbackContext))
     text = update.message.text
     owner_id = str(get_user_id(update))
     try:
@@ -506,7 +484,6 @@ def changing_title(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(reply_keyboard_additional)
     update.message.reply_text(msg, reply_markup=reply_markup)
     
-    my_logging('info',' __Interface__  changing_title __> result: CHANGING_TASK')
     return CHANGING_TASK
 
 
@@ -556,7 +533,7 @@ conv_handler = ConversationHandler(
 dispatcher.add_handler(conv_handler)
 
 # Start the Bot
-updater.start_polling()
+#updater.start_polling()
 
 
 
@@ -566,13 +543,12 @@ updater.start_polling()
 
 j= updater.job_queue
 # I can't put it outside since I should pass this function to another function and that another function just give update to it
-def talker(update):
-    
-    my_logging('info',' __Interface__  talker __> update:'+str(update))
+@my_logger
+def talker(update):    
     for user_id in bl.user_id_list():
         reply_markup, trigger = get_tasks_as_keyboards(user_id)
-        if trigger and bl.get_last_time_a_task_has_done(user_id)+(int(os.environ['sleep_time']))<bl.time_to_num(bl.get_time(user_id)):
-            updater.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
+        if  trigger:
+            update.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
     
     
 j.run_repeating(talker,interval = int(os.environ['sleep_time'])  ,first= 0)
