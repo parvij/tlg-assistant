@@ -25,7 +25,7 @@ SELECTING_COMMAND, NEW_TASK, CHANGING_TASK, CHANGING_TASK_TITLE, CHANGING_TASK_I
     
 def time_plus_now(user_id,x):
     t = bl.get_time(owner_id=user_id)
-    delta = dt.timedelta(minutes = x)
+    delta = dt.timedelta(minutes = int(x))
     tm = (dt.datetime.combine(dt.date(1,1,1),t) + delta).time()
     return  str(tm.hour)+':'+str(tm.minute)
     
@@ -245,6 +245,7 @@ def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
     if val[0] == 'Task':
         keyboard = [[InlineKeyboardButton('Done', callback_data=f'Action,Done,{val[2]},{val[1]}')],
                     [InlineKeyboardButton('Postponed', callback_data=f'Action,Postpone,{val[2]},{val[1]}'),
+                     #InlineKeyboardButton('Done Yesterday', callback_data=f'_Action,Done yesterday,{val[2]},{val[1]}'),
                      InlineKeyboardButton('#Undo', callback_data=f'_Action,Undo,{val[2]},{val[1]}')],
                     [InlineKeyboardButton('Cancel', callback_data=f'Cancel,0,0,{val[1]}'),
                      InlineKeyboardButton('#Delete', callback_data=f'Action,Delete,{val[2]},{val[1]}'),
@@ -509,7 +510,8 @@ dispatcher = updater.dispatcher
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start),
                   CommandHandler('menu', menu),
-                  MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting)],
+                  MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting),
+                  CallbackQueryHandler(InlineKeyboardHandler)],
     states={
         SELECTING_COMMAND: [MessageHandler(Filters.regex('^(Show Tasks|New Task|Setting)$'), cat_selecting),
                             CallbackQueryHandler(InlineKeyboardHandler),
@@ -548,7 +550,11 @@ def talker(update):
     for user_id in bl.user_id_list():
         reply_markup, trigger = get_tasks_as_keyboards(user_id)
         if  trigger:
-            update.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
+            try:
+                update.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
+            except Exception as e:
+                my_logging('error',str(e))
+                
     
     
 j.run_repeating(talker,interval = int(os.environ['sleep_time'])  ,first= 0)
