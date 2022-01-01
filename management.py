@@ -556,7 +556,12 @@ def talker(update):
         reply_markup, trigger = get_tasks_as_keyboards(user_id)
         if  trigger:
             try:
-                update.bot.sendMessage(chat_id=user_id, text='would you like to do a task?', reply_markup=reply_markup)
+                first_task = ''
+                try:
+                    first_task = reply_markup.inline_keyboard[0][0].text
+                except:
+                    pass
+                update.bot.sendMessage(chat_id=user_id, text= first_task+' \nwould you like to do a task?', reply_markup=reply_markup)
             except Exception as e:
                 my_logging('error',str(e))
                 

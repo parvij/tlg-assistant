@@ -95,7 +95,7 @@ def get_tasks_list(owner_id,category='not_done & current & start_end & short'):
         # min periority or Once    
         tasks_df = pd.concat([df4[df4.repeat!='Once'].sort_values(['Periority','cnt_done']).head(5),
                                    df4[df4.repeat=='Once']]
-                                  ).reset_index(drop=True).sort_values(['Periority','cnt_done'])    
+                                  ).reset_index(drop=True).sort_values(['Periority','cnt_done','time_cost'])    
     result = tasks_df[['id','name','time_cost']]
     return result, has_new
 
