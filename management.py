@@ -93,6 +93,12 @@ def get_tasks_as_keyboards(user_id,category = 'Current suggestion'):
     
     trigger = len(task_list)>0 and ( has_new or time_of_last_task_which_has_done + sleep_time < current_time_user)
     
+    print('''\t\tlen task list: {}
+          has new: {}
+          time_of_last_task_which_has_done: {}
+          sleep_time: {}
+          current_time_user: {}
+          '''.format(len(task_list)>0 , has_new , time_of_last_task_which_has_done ,sleep_time ,current_time_user))
     
     return reply_markup, trigger
 
@@ -236,7 +242,6 @@ def cat_selecting(update: Update, context: CallbackContext) -> int:
     
 @my_logger
 def InlineKeyboardHandler(update: Update, _: CallbackContext) -> None:
-    print('clicked'*50)
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
